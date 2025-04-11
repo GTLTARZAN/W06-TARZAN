@@ -551,6 +551,7 @@
     <FxCompile Include="Shaders\GizmoPixelShader.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\UberLit.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="TARZAN.natvis" />
