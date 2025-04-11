@@ -228,3 +228,80 @@ float4 Uber_PS(VS_OUT Input) : SV_TARGET
     
     return finalPixel;
 }
+
+
+
+
+
+#define LIGHTING_MODEL_PHONG 1
+
+#if LIGHTING_MODEL_PHONG
+// Caculate Ambient는 기존 CalculateAmbientLight 사용
+
+float4 CalculateDirectionalLightBlinnPhong(FDirectionalLightInfo info, float3 normal, float3 viewDir)
+{
+    // Diffuse
+    float diff = max(dot(normal, info.Direction.xyz), 0.0f);
+    
+    // Specular
+    
+    float3 halfDir = normalize(info.Direction.xyz + viewDir);
+    
+    // TODO: 32 값은 Roughness 값으로 변수화 필요
+    float spec = pow(max(dot(normal, halfDir), 0.0f), 32);
+
+    return info.Color * info.Intensity * (diff + spec);
+}
+
+float4 CalculatePointLightBlinnPhong(FPointLightInfo info, float3 worldPos, float3 normal, float3 viewDir)
+{
+    float3 lightDir = info.Position.xyz - worldPos;
+    float distance = length(lightDir);
+    // 거리가 Radius를 초과하면 빛의 영향을 주지 않음
+    if (distance > info.AttenuationRadius)
+        return float4(0.0f, 0.0f, 0.0f, 0.0f);
+    
+    lightDir = normalize(lightDir);
+    
+
+    // 거리에 따른 감쇠 계산 (Radius를 기준으로 정규화)
+    float normalizedDistance = distance / info.AttenuationRadius;
+    float attenuation = 1.0f / (1.0f + info.LightFalloffExponent * normalizedDistance * normalizedDistance);
+    float diff = max(0.0f, dot(normal, lightDir));
+    
+    float3 halfDir = normalize(lightDir + viewDir);
+    // TODO: 32 값은 Roughness 값으로 변수화 필요
+    float spec = pow(max(dot(normal, halfDir), 0.0f), 32);
+    
+    return info.Color * info.Intensity * attenuation * (diff + spec);
+}
+
+float4 CalculateSpotLightBlinnPhong(FSpotLightInfo info, float3 worldPos, float3 normal, float3 viewDir)
+{
+    float3 lightDir = info.Position.xyz - worldPos;
+    float distance = length(lightDir);
+    // 거리가 Radius를 초과하면 빛의 영향을 주지 않음
+    if (distance > info.AttenuationRadius)
+        return float4(0.0f, 0.0f, 0.0f, 0.0f);
+    
+    lightDir = normalize(lightDir);
+    
+    // 거리에 따른 감쇠 계산 (Radius를 기준으로 정규화)
+    float normalizedDistance = distance / info.AttenuationRadius;
+    float attenuation = 1.0f / (1.0f + info.LightFalloffExponent * normalizedDistance * normalizedDistance);
+    float diff = max(0.0f, dot(normal, lightDir));
+    float4 diffuse = info.Color * info.Intensity * attenuation * diff;
+    
+    float3 halfDir = normalize(lightDir + viewDir);
+    // TODO: 32 값은 Roughness 값으로 변수화 필요
+    float spec = pow(max(dot(normal, halfDir), 0.0f), 32);
+    float4 specular = info.Color * info.Intensity * attenuation * spec;
+    
+    float3 spotDir = normalize(-info.Direction.xyz);
+    float spotFactor = dot(lightDir, spotDir);
+    float spotLightFactor = smoothstep(cos(info.OuterConeAngle), cos(info.InnerConeAngle), spotFactor);
+    
+    return info.Color * info.Intensity * attenuation * spotLightFactor * (diff + spec);
+}
+
+#endif
