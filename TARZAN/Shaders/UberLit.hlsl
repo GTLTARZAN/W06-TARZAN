@@ -3,6 +3,8 @@
 #define NUM_POINT_LIGHT 4
 #define NUM_SPOT_LIGHT 4
 
+#define LIGHTING_MODEL_PHONG 1
+
 struct FAmbientLightInfo
 {
     float4 Color;
@@ -42,6 +44,7 @@ cbuffer PerObject : register(b0)
     row_major float4x4 World;
     row_major float4x4 View;
     row_major float4x4 Projection;
+    float3 CameraWorldPos;
 };
 
 cbuffer Lighting : register(b1)
@@ -159,7 +162,7 @@ VS_OUT Uber_VS(VS_IN Input)
 float4 Uber_PS(VS_OUT Input) : SV_TARGET
 {
     float4 finalPixel;
-    
+     
 #if LIGHTING_MODEL_GOURAUD
     finalPixel = Input.Color;
 #elif LIGHTING_MODEL_LAMBERT
@@ -179,49 +182,24 @@ float4 Uber_PS(VS_OUT Input) : SV_TARGET
     
     finalPixel = finalColor;
 #elif LIGHTING_MODEL_PHONG
-    float3 viewDir = normalize(-Input.WorldPos);
+    float3 viewDir = normalize(Input.WorldPos - CameraWorldPos);
     float4 finalColor = CalculateAmbientLight(Ambient);
     
-    // Directional Light
-    float3 lightDir = normalize(-Directional.Direction.xyz);
-    float NdotL = max(0.0f, dot(Input.Normal, lightDir));
-    float3 reflectDir = reflect(-lightDir, Input.Normal);
-    float spec = pow(max(0.0f, dot(viewDir, reflectDir)), 32.0f);
-    finalColor += Directional.Color * Directional.Intensity * (NdotL + spec);
+    // DirectionalLight
+    finalColor += CalculateDirectionalLightBlinnPhong(Directional, Input.Normal, viewDir);
     
-    // Point Lights
+    // PointLight
     for (int i = 0; i < NUM_POINT_LIGHT; i++)
     {
-        float3 pointLightDir = PointLights[i].Position.xyz - Input.WorldPos;
-        float distance = length(pointLightDir);
-        pointLightDir = normalize(pointLightDir);
-
-        float attenuation = 1.0f / (1.0f + PointLights[i].Attenuation * distance * distance);
-        NdotL = max(0.0f, dot(Input.Normal, pointLightDir));
-        reflectDir = reflect(-pointLightDir, Input.Normal);
-        spec = pow(max(0.0f, dot(viewDir, reflectDir)), 32.0f);
-        
-        finalColor += PointLights[i].Color * PointLights[i].Intensity * (NdotL + spec) * attenuation;
+        finalColor += CalculatePointLightBlinnPhong(PointLights[i], Input.WorldPos, Input.Normal, viewDir);
     }
     
-    // Spot Lights
+    // SpotLight
     for (int j = 0; j < NUM_SPOT_LIGHT; j++)
     {
-        float3 spotLightDir = SpotLights[j].Position.xyz - Input.WorldPos;
-        float distance = length(spotLightDir);
-        spotLightDir = normalize(spotLightDir);
-        
-        float attenuation = 1.0f / (1.0f + SpotLights[j].Attenuation * distance * distance);
-        NdotL = max(0.0f, dot(Input.Normal, spotLightDir));
-        reflectDir = reflect(-spotLightDir, Input.Normal);
-        spec = pow(max(0.0f, dot(viewDir, reflectDir)), 32.0f);
-        
-        float3 spotDir = normalize(-SpotLights[j].Direction.xyz);
-        float spotFactor = dot(spotLightDir, spotDir);
-        float spotLightFactor = smoothstep(cos(SpotLights[j].OuterAngle), cos(SpotLights[j].InnerAngle), spotFactor);
-        
-        finalColor += SpotLights[j].Color * SpotLights[j].Intensity * (NdotL + spec) * attenuation * spotLightFactor;
+        finalColor += CalculateSpotLightBlinnPhong(SpotLights[j], Input.WorldPos, Input.Normal, viewDir);
     }
+    
     
     finalPixel = finalColor;
 #endif
@@ -233,7 +211,7 @@ float4 Uber_PS(VS_OUT Input) : SV_TARGET
 
 
 
-#define LIGHTING_MODEL_PHONG 1
+
 
 #if LIGHTING_MODEL_PHONG
 // Caculate Ambient는 기존 CalculateAmbientLight 사용
