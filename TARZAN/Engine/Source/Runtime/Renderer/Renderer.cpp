@@ -91,9 +91,13 @@ void FRenderer::RenderPass()
     Graphics->ChangeRasterizer(ActiveViewport->GetViewMode());
     ChangeViewMode(ActiveViewport->GetViewMode());
 
+#if USE_GBUFFER
     RenderGBuffer();
 
     RenderLightPass();
+#else
+    RenderUberPass();
+#endif
 
     RenderPostProcessPass();
     RenderOverlayPass();
@@ -131,6 +135,7 @@ void FRenderer::CreateShader()
         L"Shaders/FullScreenVertexShader.hlsl", "main", FullScreenVS,
         fullscreenLayout, ARRAYSIZE(fullscreenLayout), &FullScreenInputLayout, &FullScreenStride, sizeof(FVertexTexture));
 
+#if USE_GBUFFER
     // GBuffer Shader
     D3D11_INPUT_ELEMENT_DESC GBufferLayout[] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -146,6 +151,21 @@ void FRenderer::CreateShader()
     ShaderManager.CreatePixelShader(L"Shaders/MeshPixelShader.hlsl", "main", GBufferPS);
 
     ShaderManager.CreatePixelShader(L"Shaders/LightingPassPixelShader.hlsl", "main", LightingPassPS);
+#else
+    D3D11_INPUT_ELEMENT_DESC UberLayout[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"MATERIAL_INDEX", 0, DXGI_FORMAT_R32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
+    };
+
+    ShaderManager.CreateVertexShader(L"Shaders/UberLit.hlsl", "Uber_VS",
+        UberVS, UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout, &Stride, sizeof(FVertexSimple));
+    
+    ShaderManager.CreatePixelShader(L"Shaders/UberLit.hlsl", "Uber_PS", UberPS);
+
+#endif
 
     ShaderManager.CreatePixelShader(L"Shaders/GizmoPixelShader.hlsl", "main", GizmoPixelShader);
 
@@ -176,9 +196,28 @@ void FRenderer::CreateShader()
 
 void FRenderer::ReleaseShader()
 {
+    ShaderManager.ReleaseShader(UberInputLayout, UberVS, UberPS);
     ShaderManager.ReleaseShader(InputLayout, VertexShader, PixelShader);
     ShaderManager.ReleaseShader(TextureInputLayout, VertexTextureShader, PixelTextureShader);
     ShaderManager.ReleaseShader(nullptr, VertexLineShader, PixelLineShader);
+}
+
+void FRenderer::PrepareUberShader() const
+{
+    Graphics->DeviceContext->VSSetShader(UberVS, nullptr, 0);
+    Graphics->DeviceContext->PSSetShader(UberPS, nullptr, 0);
+    Graphics->DeviceContext->IASetInputLayout(UberInputLayout);
+
+    if (ConstantBuffer)
+    {
+        Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ObjectMatrixConstantBuffer);
+        Graphics->DeviceContext->VSSetConstantBuffers(1, 1, &CameraConstantBuffer);
+        Graphics->DeviceContext->VSSetConstantBuffers(2, 1, &LightConstantBuffer);
+        Graphics->DeviceContext->VSSetConstantBuffers(3, 1, &MaterialConstantBuffer);
+
+        Graphics->DeviceContext->PSSetConstantBuffers(2, 1, &LightConstantBuffer);
+        Graphics->DeviceContext->PSSetConstantBuffers(3, 1, &MaterialConstantBuffer);
+    }
 }
 
 // Prepare
@@ -191,7 +230,7 @@ void FRenderer::PrepareShader() const
     if (ConstantBuffer)
     {
         Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ConstantBuffer);
-        Graphics->DeviceContext->PSSetConstantBuffers(0, 1, &MaterialConstantBuffer);
+        Graphics->DeviceContext->PSSetConstantBuffers(0, 1, &GMaterialConstantBuffer);
     }
 }
 
@@ -251,7 +290,7 @@ void FRenderer::PrepareGizmoShader() const
     if (ConstantBuffer)
     {
         Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ConstantBuffer);
-        Graphics->DeviceContext->PSSetConstantBuffers(0, 1, &MaterialConstantBuffer);
+        Graphics->DeviceContext->PSSetConstantBuffers(0, 1, &GMaterialConstantBuffer);
     }
 }
 
@@ -292,7 +331,15 @@ void FRenderer::CreateConstantBuffer()
     FlagBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FLitUnlitConstants));
 
     ConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FConstants));
+#if USE_GBUFFER
+    GMaterialConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FMaterialConstants));
+#else
+    ObjectMatrixConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FMatrixConstants));
+    CameraConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FCameraConstant));
+    LightConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FLightConstants));
     MaterialConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FMaterialConstants));
+#endif
+
 
     LPLightConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FLightConstant));
     FireballConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FFireballArrayInfo));
@@ -308,7 +355,7 @@ void FRenderer::ReleaseConstantBuffer()
     RenderResourceManager.ReleaseBuffer(SubUVConstantBuffer);
     RenderResourceManager.ReleaseBuffer(GridConstantBuffer);
     RenderResourceManager.ReleaseBuffer(LinePrimitiveBuffer);
-    RenderResourceManager.ReleaseBuffer(MaterialConstantBuffer);
+    RenderResourceManager.ReleaseBuffer(GMaterialConstantBuffer);
     RenderResourceManager.ReleaseBuffer(SubMeshConstantBuffer);
     RenderResourceManager.ReleaseBuffer(TextureConstantBuffer);
     RenderResourceManager.ReleaseBuffer(LightingBuffer);
@@ -540,7 +587,12 @@ void FRenderer::RenderTexturedModelPrimitive(
 
 void FRenderer::RenderStaticMeshes()
 {
+#if USE_GBUFFER
     PrepareShader();
+#else
+    PrepareUberShader();
+#endif
+
     for (UStaticMeshComponent* StaticMeshComp : StaticMeshObjs)
     {
         FMatrix Model = JungleMath::CreateModelMatrix(
@@ -548,22 +600,88 @@ void FRenderer::RenderStaticMeshes()
             StaticMeshComp->GetWorldRotation(),
             StaticMeshComp->GetWorldScale()
         );
-        FMatrix MVP = Model * ActiveViewport->GetViewMatrix() * ActiveViewport->GetProjectionMatrix();
-        FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(Model));
-        FVector4 UUIDColor = StaticMeshComp->EncodeUUID() / 255.0f;
+        
+        FMatrixConstants MatrixConstant =
+        {
+            .World = Model,
+            .View = ActiveViewport->GetViewMatrix(),
+            .Projection = ActiveViewport->GetProjectionMatrix()
+        };
+        ConstantBufferUpdater.UpdateObjectMatrixConstants(ObjectMatrixConstantBuffer, MatrixConstant);
 
-        bool isSelected = World->GetSelectedActor() == StaticMeshComp->GetOwner();
-        ConstantBufferUpdater.UpdateConstantWithCamPos(ConstantBuffer,
-            MVP, Model, NormalMatrix, UUIDColor, isSelected, ActiveViewport->GetCameraLocation());
+        FCameraConstant CameraConstant =
+        {
+            .CameraWorldPos = ActiveViewport->GetCameraLocation()
+        };
+        ConstantBufferUpdater.UpdateCameraPositionConstants(CameraConstantBuffer, CameraConstant);
 
-        //if (USkySphereComponent* skysphere = Cast<USkySphereComponent>(StaticMeshComp))
-        //{
-        //    ConstantBufferUpdater.UpdateTextureConstant(TextureConstantBuffer, skysphere->UOffset, skysphere->VOffset);
-        //}
-        //else
-        //{
-        //    ConstantBufferUpdater.UpdateTextureConstant(TextureConstantBuffer, 0, 0);
-        //}
+        FAmbientLightInfo Ambient =
+        {
+            .Color = FLinearColor(0.1f, 0.1f, 0.1f, 1.f),
+            .Intensity = 1
+        };
+
+        FDirectionalLightInfo DirectionalLight =
+        {
+            .Color = FLinearColor(1.f, 1.f, 1.f, 1.f),
+            .Direction = FVector4(1, -1, -1, 1),
+            .Intensity = 1
+        };
+        // Point Light
+        std::unique_ptr<FPointLightArrayInfo> PointLightArrayInfo = std::make_unique<FPointLightArrayInfo>();
+        std::unique_ptr<FSpotLightArrayInfo> SpotLightArrayInfo = std::make_unique<FSpotLightArrayInfo>();
+        if (LightObjs.Num() > 0)
+        {
+            for (int i = 0; i < LightObjs.Num(); i++) 
+            {
+                // TODO: LIGHT 관련 클래스 만들고 작업필요합니다.
+            }
+        }
+
+        std::unique_ptr<FFireballArrayInfo> fireballArrayInfo = std::make_unique<FFireballArrayInfo>();
+
+        if (FireballObjs.Num() > 0)
+        {
+            fireballArrayInfo->FireballCount = 0;
+
+            for (int i = 0; i < FireballObjs.Num(); i++)
+            {
+                if (FireballObjs[i] != nullptr)
+                {
+                    const FFireballInfo& fireballInfo = FireballObjs[i]->GetFireballInfo();
+                    fireballArrayInfo->FireballConstants[i].Intensity = fireballInfo.Intensity;
+                    fireballArrayInfo->FireballConstants[i].Radius = fireballInfo.Radius;
+                    fireballArrayInfo->FireballConstants[i].Color = fireballInfo.Color;
+                    fireballArrayInfo->FireballConstants[i].RadiusFallOff = fireballInfo.RadiusFallOff;
+                    fireballArrayInfo->FireballConstants[i].Position = FireballObjs[i]->GetWorldLocation();
+                    fireballArrayInfo->FireballConstants[i].LightType = fireballInfo.Type;
+                    if (USpotLightComponent* spotLight = Cast<USpotLightComponent>(FireballObjs[i]))
+                    {
+                        fireballArrayInfo->FireballConstants[i].InnerAngle = spotLight->GetInnerSpotAngle();
+                        fireballArrayInfo->FireballConstants[i].OuterAngle = spotLight->GetOuterSpotAngle();
+                        fireballArrayInfo->FireballConstants[i].Direction = spotLight->GetForwardVector();
+                    }
+                    fireballArrayInfo->FireballCount++;
+                }
+            }
+        }
+
+        FPointLightInfo PointLight;
+        FSpotLightInfo SpotLight;
+
+        FLightConstants LightConstant =
+        {
+            .Ambient = Ambient,
+            .Directional = DirectionalLight,
+            .PointLights = PointLight,
+            .SpotLights = SpotLight,
+        };
+        ConstantBufferUpdater.UpdateLightConstants(LightConstantBuffer, LightConstant);
+
+        //FMatrix MVP = Model * ActiveViewport->GetViewMatrix() * ActiveViewport->GetProjectionMatrix();
+        //FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(Model));
+        //FVector4 UUIDColor = StaticMeshComp->EncodeUUID() / 255.0f;
+        //bool isSelected = World->GetSelectedActor() == StaticMeshComp->GetOwner();
 
         if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_AABB))
         {
@@ -650,8 +768,10 @@ void FRenderer::RenderGizmos()
 
 void FRenderer::RenderBillboards()
 {
+#if USE_GBUFFER
     PrepareTextureShader();
     PrepareSubUVConstant();
+#endif
     for (auto BillboardComp : BillboardObjs)
     {
         ConstantBufferUpdater.UpdateSubUVConstant(SubUVConstantBuffer, BillboardComp->finalIndexU, BillboardComp->finalIndexV);
@@ -693,7 +813,11 @@ void FRenderer::RenderBillboards()
             );
         }
     }
+#if USE_GBUFFER
     PrepareShader();
+#else
+    PrepareUberShader();
+#endif
 }
 
 void FRenderer::RenderFullScreenQuad()
@@ -770,9 +894,24 @@ void FRenderer::RenderBatch(
 #pragma endregion Render
 
 #pragma region MultiPass
+void FRenderer::RenderUberPass()
+{
+    // StaticMesh
+    if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_Primitives)) 
+    {
+        RenderStaticMeshes();
+    }
+
+    // Billboard
+    if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_BillboardText)) 
+    {
+        RenderBillboards();
+    }
+}
+
 void FRenderer::RenderGBuffer()
 {
-    Graphics->DeviceContext->OMSetRenderTargets(4, Graphics->GBufferRTVs, Graphics->DepthStencilView);
+    //Graphics->DeviceContext->OMSetRenderTargets(4, Graphics->GBufferRTVs, Graphics->DepthStencilView);
 
     // StaticMesh
     if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_Primitives))
@@ -928,7 +1067,11 @@ void FRenderer::ChangeViewMode(EViewModeIndex evi) const
 
 void FRenderer::UpdateMaterial(const FObjMaterialInfo& MaterialInfo) const
 {
+#if USE_GBUFFER
+    ConstantBufferUpdater.UpdateMaterialConstant(GMaterialConstantBuffer, MaterialInfo);
+#else
     ConstantBufferUpdater.UpdateMaterialConstant(MaterialConstantBuffer, MaterialInfo);
+#endif
 
     if (MaterialInfo.bHasTexture == true)
     {

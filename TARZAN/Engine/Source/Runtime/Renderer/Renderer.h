@@ -46,11 +46,16 @@ public:
     ID3D11VertexShader* FullScreenVS = nullptr;
     ID3D11InputLayout* FullScreenInputLayout = nullptr;
     
+    // Uber Shader
+    ID3D11VertexShader* UberVS = nullptr;
+    ID3D11PixelShader* UberPS = nullptr;
+    ID3D11InputLayout* UberInputLayout = nullptr;
+
     // GBuffer Shader
     ID3D11VertexShader* GBufferVS = nullptr;
     ID3D11PixelShader* GBufferPS = nullptr;
     ID3D11InputLayout* GBufferInputLayout = nullptr;
-    
+
     // Lighting Shader
     ID3D11PixelShader* LightingPassPS = nullptr;
 
@@ -66,9 +71,14 @@ public:
 
     // Constant Buffer
     ID3D11Buffer* ConstantBuffer = nullptr;
+    ID3D11Buffer* ObjectMatrixConstantBuffer = nullptr;
+    ID3D11Buffer* CameraConstantBuffer = nullptr;
+    ID3D11Buffer* LightConstantBuffer = nullptr;
+    ID3D11Buffer* MaterialConstantBuffer = nullptr;
+
     ID3D11Buffer* LightingBuffer = nullptr;
     ID3D11Buffer* FlagBuffer = nullptr;
-    ID3D11Buffer* MaterialConstantBuffer = nullptr;
+    ID3D11Buffer* GMaterialConstantBuffer = nullptr;
     ID3D11Buffer* SubMeshConstantBuffer = nullptr;
     ID3D11Buffer* TextureConstantBuffer = nullptr;
     ID3D11Buffer* FireballConstantBuffer = nullptr;
@@ -105,6 +115,7 @@ public:
 
     // Shader
     void CreateShader();
+    void PrepareUberShader() const;
     void PrepareShader() const;
     void PrepareLightShader() const;
     void PreparePostProcessShader() const;
@@ -124,6 +135,7 @@ public:
     void UpdateMaterial(const FObjMaterialInfo& MaterialInfo) const;
 
 private:
+    void RenderUberPass();
     // Render Pass
     void RenderGBuffer();
     void RenderLightPass();

@@ -39,20 +39,42 @@ struct FSpotLightInfo
     float OuterConeAngle;
 };
 
-cbuffer PerObject : register(b0)
+struct FMaterialInfo
+{
+    float3 DiffuseColor;
+    float3 AmbientColor;
+    float3 SpecularColor;
+    float3 EmmisiveColor;
+    float TransparencyScalar;
+    float DensityScalar;
+    float SpecularScalar;
+    float MaterialPad0;
+};
+
+cbuffer ObjectMatrixConstant : register(b0)
 {
     row_major float4x4 World;
     row_major float4x4 View;
     row_major float4x4 Projection;
-    float3 CameraWorldPos;
 };
 
-cbuffer Lighting : register(b1)
+cbuffer CameraConstant : register(b1)
+{
+    float3 CameraWorldPos;
+    float Padding;
+};
+
+cbuffer LightConstant : register(b2)
 {
     FAmbientLightInfo Ambient;
     FDirectionalLightInfo Directional;
     FPointLightInfo PointLights[NUM_POINT_LIGHT];
     FSpotLightInfo SpotLights[NUM_SPOT_LIGHT];
+};
+
+cbuffer MaterialConstant : register(b3)
+{
+    FMaterialInfo Material;
 };
 
 float4 CalculateAmbientLight(FAmbientLightInfo info)
@@ -66,6 +88,8 @@ float4 CalculateDirectionalLight(FDirectionalLightInfo info, float3 normal, floa
     float NdotL = max(0.0f, dot(normal, lightDir));
     return info.Color * info.Intensity * NdotL;
 }
+
+float4 CalculateDirectionalLightBlinnPhong(FDirectionalLightInfo info, float3 normal, float3 viewDir);
 
 float4 CalculatePointLight(FPointLightInfo info, float3 worldPos, float3 normal, float3 viewDir)
 {
@@ -85,6 +109,8 @@ float4 CalculatePointLight(FPointLightInfo info, float3 worldPos, float3 normal,
     
     return info.Color * info.Intensity * NdotL * attenuation;
 }
+
+float4 CalculatePointLightBlinnPhong(FPointLightInfo info, float3 worldPos, float3 normal, float3 viewDir);
 
 float4 CalculateSpotLight(FSpotLightInfo info, float3 worldPos, float3 normal, float3 viewDir)
 {
@@ -108,6 +134,8 @@ float4 CalculateSpotLight(FSpotLightInfo info, float3 worldPos, float3 normal, f
     
     return info.Color * info.Intensity * NdotL * attenuation * spotLightFactor;
 }
+
+float4 CalculateSpotLightBlinnPhong(FSpotLightInfo info, float3 worldPos, float3 normal, float3 viewDir);
 
 struct VS_IN
 {
@@ -200,18 +228,11 @@ float4 Uber_PS(VS_OUT Input) : SV_TARGET
         finalColor += CalculateSpotLightBlinnPhong(SpotLights[j], Input.WorldPos, Input.Normal, viewDir);
     }
     
-    
     finalPixel = finalColor;
 #endif
     
     return finalPixel;
 }
-
-
-
-
-
-
 
 #if LIGHTING_MODEL_PHONG
 // Caculate Ambient는 기존 CalculateAmbientLight 사용

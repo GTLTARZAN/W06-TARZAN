@@ -17,6 +17,8 @@
 #define _TCHAR_DEFINED
 
 #define Max_Fireball 300
+#define NUM_POINT_LIGHT 4
+#define NUM_SPOT_LIGHT 4
 
 #include <d3d11.h>
 
@@ -309,6 +311,63 @@ struct FConstants {
     FVector2D ViewportSize;
 };
 
+#pragma region Uber
+struct FMatrixConstants 
+{
+    FMatrix World;
+    FMatrix View;
+    FMatrix Projection;
+};
+
+struct FCameraConstant 
+{
+    FVector CameraWorldPos;
+    float Padding;
+};
+
+struct FAmbientLightInfo
+{
+    FLinearColor Color;
+    float Intensity;
+};
+
+struct FDirectionalLightInfo
+{
+    FLinearColor Color;
+    FVector4 Direction;
+    float Intensity;
+};
+
+struct FPointLightInfo
+{
+    FLinearColor Color;
+    FVector4 Position;
+    float Intensity;
+    float AttenuationRadius;
+    float LightFalloffExponent;
+};
+
+struct FSpotLightInfo
+{
+    FLinearColor Color;
+    FVector4 Position;
+    FVector4 Direction;
+    float Intensity;
+    float AttenuationRadius;
+    float LightFalloffExponent;
+    float InnerConeAngle;
+    float OuterConeAngle;
+};
+
+struct FLightConstants 
+{
+    FAmbientLightInfo Ambient;
+    FDirectionalLightInfo Directional;
+    FPointLightInfo PointLights[NUM_POINT_LIGHT];
+    FSpotLightInfo SpotLights[NUM_SPOT_LIGHT];
+};
+#pragma endregion
+
 struct FLitUnlitConstants {
     int isLit; // 1 = Lit, 0 = Unlit 
     FVector pad;
@@ -397,6 +456,19 @@ struct FFireballArrayInfo
     FVector padding;
 };
 
+struct FPointLightArrayInfo
+{
+    FPointLightInfo PointLightConstants[NUM_POINT_LIGHT];
+    int PointLightCount = 0;
+    FVector padding;
+};
+
+struct FSpotLightArrayInfo 
+{
+    FSpotLightInfo SpotLightConstants[NUM_SPOT_LIGHT];
+    int SpotLightCount = 0;
+    FVector padding;
+};
 
 struct FFogConstants    
 {
