@@ -71,12 +71,13 @@ public:
     UPointLightComponent(const UPointLightComponent& Other);
     virtual ~UPointLightComponent() override;
 
-    void SetAttenuationRadius(float Radius);
-    float GetAttenuationRadius() const;
+    void SetRadius(float InRadius);
+    float GetRadius() const;
     void SetLightFalloffExponent(float Exponent);
     float GetLightFalloffExponent() const;
 
+
 protected:
-    float AttenuationRadius;
+    float Radius;
     float LightFalloffExponent;
 };

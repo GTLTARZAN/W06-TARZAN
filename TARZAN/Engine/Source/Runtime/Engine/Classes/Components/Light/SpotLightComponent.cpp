@@ -59,6 +59,11 @@ void USpotLightComponent::SetProperties(const TMap<FString, FString>& InProperti
     }
 }
 
+void USpotLightComponent::SetBoundingBox(const FBoundingBox& InAABB)
+{
+    AABB = InAABB;
+}
+
 void USpotLightComponent::DuplicateSubObjects(const UObject* Source)
 {
     Super::DuplicateSubObjects(Source);

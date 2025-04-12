@@ -1,6 +1,7 @@
 #pragma once
 #include "LightComponent.h"
 
+struct FBoundingBox;
 class USpotLightComponent : public UPointLightComponent
 {
     DECLARE_CLASS(USpotLightComponent, UPointLightComponent)
@@ -15,7 +16,7 @@ public:
 
     FVector GetDirection() { return GetForwardVector(); }
     float GetInnerConeAngle() const { return InnerConeAngle; }
-    void SetInnerConeAngle(float angle) { InnerConeAngle = angle;}
+    void SetInnerConeAngle(float angle) { InnerConeAngle = angle; }
     float GetOuterConeAngle() const { return OuterConeAngle; }
     void SetOuterConeAngle(float angle) { OuterConeAngle = angle; }
 
@@ -25,8 +26,13 @@ public:
 
     void GetProperties(TMap<FString, FString>& OutProperties) const override;
     void SetProperties(const TMap<FString, FString>& InProperties) override;
-    
+
+    void SetBoundingBox(const FBoundingBox& InAABB);
+    FBoundingBox GetBoundingBox() { return AABB; }
+
 protected:
     float InnerConeAngle;
     float OuterConeAngle;
+
+    FBoundingBox AABB;
 };

@@ -270,12 +270,22 @@ struct FCone
     float pad[3];
 
 };
+
+struct FCircle 
+{
+    FVector CircleApex; // Circle 상의 한 점
+    float CircleRadius; // Circle의 반지름
+    FVector CircleBaseCenter;   // Circle의 중심점
+    int CircleSegmentCount;    // Circle의 분할 수
+    FLinearColor Color;
+};
+
 struct FPrimitiveCounts 
 {
 	int BoundingBoxCount;
 	int pad;
 	int ConeCount; 
-	int pad1;
+    int OBBCount;
 };
 struct FLighting
 {

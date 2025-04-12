@@ -26,7 +26,7 @@ cbuffer PrimitiveCounts : register(b3)
     int BoundingBoxCount; // 렌더링할 AABB의 개수
     int pad;
     int ConeCount; // 렌더링할 cone의 개수
-    int pad1;
+    int OBBCount;
 };
 struct FBoundingBoxData
 {
@@ -45,8 +45,18 @@ struct FConeData
     float4 Color;
     
     int ConeSegmentCount; // 원뿔 밑면 분할 수
-    float pad[3];
+    float3 pad;
 };
+
+struct FCircleData
+{
+    float3 CircleApex; // Circle 상의 한 점
+    float CircleRadius; // Circle의 반지름
+    float3 CircleBaseCenter; // Circle의 중심점
+    int CircleSegmentCount; // Circle의 분할 수
+    float4 Color;
+};
+
 struct FOrientedBoxCornerData
 {
     float3 corners[8]; // 회전/이동 된 월드 공간상의 8꼭짓점
@@ -55,6 +65,8 @@ struct FOrientedBoxCornerData
 StructuredBuffer<FBoundingBoxData> g_BoundingBoxes : register(t2);
 StructuredBuffer<FConeData> g_ConeData : register(t3);
 StructuredBuffer<FOrientedBoxCornerData> g_OrientedBoxes : register(t4);
+StructuredBuffer<FCircleData> g_Circles : register(t5);
+
 static const int BB_EdgeIndices[12][2] =
 {
     { 0, 1 },
@@ -230,6 +242,35 @@ float3 ComputeConePosition(uint globalInstanceID, uint vertexID)
         return (vertexID == 0) ? v0 : v1;
     }
 }
+
+/////////////////////////////////////////////////
+// Circle 계산 함수
+/////////////////////////////////////////////////
+float3 ComputeCirclePosition(uint globalInstanceID, uint vertexID)
+{
+    int N = g_Circles[0].CircleSegmentCount;
+    
+    uint circleIndex = globalInstanceID / N;
+    uint lineIndex = globalInstanceID % N;
+    
+    FCircleData circle = g_Circles[circleIndex];
+    
+    float3 axis = normalize(circle.CircleApex - circle.CircleBaseCenter);
+    
+    float3 arbitrary = abs(dot(axis, float3(0, 0, 1))) < 0.99 ? float3(0, 0, 1) : float3(0, 1, 0);
+    float3 u = normalize(cross(axis, arbitrary));
+    float3 v = cross(axis, u);
+    
+    uint idx = lineIndex;
+    float angle0 = idx * 6.28318530718 / N;
+    float angle1 = ((idx + 1) % N) * 6.28318530718 / N;
+    float3 v0 = circle.CircleBaseCenter + (cos(angle0) * u + sin(angle0) * v) * circle.CircleRadius;
+    float3 v1 = circle.CircleBaseCenter + (cos(angle1) * u + sin(angle1) * v) * circle.CircleRadius;
+    
+    return (vertexID == 0) ? v0 : v1;
+}
+
+
 /////////////////////////////////////////////////////////////////////////
 // OBB
 /////////////////////////////////////////////////////////////////////////
@@ -252,6 +293,7 @@ PS_INPUT mainVS(VS_INPUT input)
     // Cone 하나당 (2 * SegmentCount) 선분.
     // ConeCount 개수만큼이므로 총 (2 * SegmentCount * ConeCount).
     uint coneInstCnt = ConeCount * 2 * g_ConeData[0].ConeSegmentCount;
+    uint obbInstCnt = OBBCount * 12;
 
     // Grid / Axis / AABB 인스턴스 개수 계산
     uint gridLineCount = GridCount; // 그리드 라인
@@ -261,7 +303,9 @@ PS_INPUT mainVS(VS_INPUT input)
     // 1) "콘 인스턴스 시작" 지점
     uint coneInstanceStart = gridLineCount + axisCount + aabbInstanceCount;
     // 2) 그 다음(=콘 구간의 끝)이 곧 OBB 시작 지점
-    uint obbStart = coneInstanceStart + coneInstCnt;
+    uint obbInstanceStart = coneInstanceStart + coneInstCnt;
+    // 3) 그 다음(= obb 구간의 끝)이 곧 Circle 시작 지점
+    uint circleInstanceStart = obbInstanceStart + obbInstCnt;
 
     // 이제 instanceID를 기준으로 분기
     if (input.instanceID < gridLineCount)
@@ -294,7 +338,7 @@ PS_INPUT mainVS(VS_INPUT input)
         pos = ComputeBoundingBoxPosition(bbInstanceID, bbEdgeIndex, input.vertexID);
         color = float4(1.0, 1.0, 0.0, 1.0); // 노란색
     }
-    else if (input.instanceID < obbStart)
+    else if (input.instanceID < obbInstanceStart)
     {
         // 그 다음 콘(Cone) 구간
         uint coneInstanceID = input.instanceID - coneInstanceStart;
@@ -304,14 +348,22 @@ PS_INPUT mainVS(VS_INPUT input)
         
         color = g_ConeData[coneIndex].Color;
     }
-    else
+    else if (input.instanceID < circleInstanceStart)
     {
-        uint obbLocalID = input.instanceID - obbStart;
+        uint obbLocalID = input.instanceID - obbInstanceStart;
         uint obbIndex = obbLocalID / 12;
         uint edgeIndex = obbLocalID % 12;
 
         pos = ComputeOrientedBoxPosition(obbIndex, edgeIndex, input.vertexID);
         color = float4(0.4, 1.0, 0.4, 1.0); // 예시: 연두색
+    }
+    else
+    {
+        uint circleInstanceID = input.instanceID - circleInstanceStart;
+        pos = ComputeCirclePosition(circleInstanceID, input.vertexID);
+        uint circleIndex = circleInstanceID / g_Circles[0].CircleSegmentCount;
+        
+        color = g_Circles[circleIndex].Color;
     }
 
     // 출력 변환

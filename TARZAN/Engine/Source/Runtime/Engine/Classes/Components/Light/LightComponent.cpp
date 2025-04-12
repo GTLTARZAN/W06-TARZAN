@@ -96,14 +96,14 @@ UDirectionalLightComponent::~UDirectionalLightComponent()
 
 // UPointLightComponent
 UPointLightComponent::UPointLightComponent()
-    : AttenuationRadius(1000.0f)
+    : Radius(10.0f)
     , LightFalloffExponent(2.0f)
 {
 }
 
 UPointLightComponent::UPointLightComponent(const UPointLightComponent& Other)
 {
-    AttenuationRadius = Other.AttenuationRadius;
+    Radius = Other.Radius;
     LightFalloffExponent = Other.LightFalloffExponent;
     LightColor = Other.LightColor;
     Intensity = Other.Intensity;
@@ -117,14 +117,14 @@ UPointLightComponent::~UPointLightComponent()
 {
 }
 
-void UPointLightComponent::SetAttenuationRadius(float Radius)
+void UPointLightComponent::SetRadius(float InRadius)
 {
-    AttenuationRadius = Radius;
+    Radius = Radius;
 }
 
-float UPointLightComponent::GetAttenuationRadius() const
+float UPointLightComponent::GetRadius() const
 {
-    return AttenuationRadius;
+    return Radius;
 }
 
 void UPointLightComponent::SetLightFalloffExponent(float Exponent)

@@ -48,13 +48,16 @@ void UPrimitiveBatch::RenderBatch(ID3D11Buffer* ConstantBuffer, const FMatrix& V
     UpdateBoundingBoxResources();
     UpdateConeResources();
     UpdateOBBResources();
+    UpdateCircleResources();
     int boundingBoxSize = static_cast<int>(BoundingBoxes.Num());
     int coneSize = static_cast<int>(Cones.Num());
     int obbSize = static_cast<int>(OrientedBoundingBoxes.Num());
-    UEditorEngine::renderer.UpdateLinePrimitveCountBuffer(boundingBoxSize, coneSize);
-    UEditorEngine::renderer.RenderBatch(GridParam, pVertexBuffer, boundingBoxSize, coneSize, ConeSegmentCount, obbSize);
+    int circleSize = static_cast<int>(Circles.Num());
+    UEditorEngine::renderer.UpdateLinePrimitveCountBuffer(boundingBoxSize, coneSize, obbSize);
+    UEditorEngine::renderer.RenderBatch(GridParam, pVertexBuffer, boundingBoxSize, coneSize, ConeSegmentCount, obbSize, circleSize, CircleSegmentCount);
     BoundingBoxes.Empty();
     Cones.Empty();
+    Circles.Empty();
     OrientedBoundingBoxes.Empty();
 #if USE_GBUFFER
     UEditorEngine::renderer.PrepareShader();
@@ -137,6 +140,29 @@ void UPrimitiveBatch::ReleaseOBBResources()
     if (pOBBBuffer) pOBBBuffer->Release();
     if (pOBBSRV) pOBBSRV->Release();
 }
+void UPrimitiveBatch::UpdateCircleResources()
+{
+    if (Circles.Num() > allocatedCircleCapacity) 
+    {
+        allocatedCircleCapacity = Circles.Num();
+
+        ReleaseCircleResources();
+
+        pCircleBuffer = UEditorEngine::renderer.GetResourceManager().CreateStructuredBuffer<FCircle>(static_cast<UINT>(allocatedCircleCapacity));
+        pCircleSRV = UEditorEngine::renderer.CreateCircleSRV(pCircleBuffer, static_cast<UINT>(allocatedConeCapacity));
+    }
+
+    if (pCircleBuffer && pCircleSRV) 
+    {
+        int circleCount = static_cast<int>(Circles.Num());
+        UEditorEngine::renderer.UpdateCirclesBuffer(pCircleBuffer, Circles, circleCount);
+    }
+}
+void UPrimitiveBatch::ReleaseCircleResources()
+{
+    if (pCircleBuffer) pCircleBuffer->Release();
+    if (pCircleSRV) pCircleSRV->Release();
+}
 void UPrimitiveBatch::RenderAABB(const FBoundingBox& localAABB, const FVector& center, const FMatrix& modelMatrix)
 {
     FVector localVertices[8] = {
@@ -211,5 +237,18 @@ void UPrimitiveBatch::AddCone(const FVector& center, float radius, float height,
     cone.Color = color;
     cone.ConeSegmentCount = ConeSegmentCount;
     Cones.Add(cone);
+}
+
+void UPrimitiveBatch::AddCircle(const FVector& center, float radius, int segments, const FLinearColor& color, const FMatrix& modelMatrix)
+{
+    CircleSegmentCount = segments;
+    FVector localApex = FVector(radius, 0, 0);
+    FCircle circle;
+    circle.CircleApex = center + FMatrix::TransformVector(localApex, modelMatrix);
+    circle.CircleBaseCenter = center;
+    circle.CircleRadius = radius;
+    circle.Color = color;
+    circle.CircleSegmentCount = CircleSegmentCount;
+    Circles.Add(circle);
 }
 

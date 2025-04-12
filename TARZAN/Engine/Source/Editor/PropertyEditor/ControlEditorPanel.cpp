@@ -263,16 +263,16 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
 
         static const Primitive primitives[] = {
             
-            { .label= "Sphere",      .obj= OBJ_SPHERE },
-            { .label= "Cone",        .obj= OBJ_Cone },
-            { .label= "Cylinder",    .obj= OBJ_Cylinder },
-            { .label= "Plane",       .obj= OBJ_Plane },
-            { .label= "Torus",       .obj= OBJ_Torus },
-            { .label= "Cube",      .obj= OBJ_CUBE },
-            { .label= "SpotLight", .obj= OBJ_SpotLight },
-            { .label= "Particle",  .obj= OBJ_PARTICLE },
-            { .label= "Text",      .obj= OBJ_Text },
-            {.label = "Fog",       .obj = OBJ_Fog},
+            { .label= "Cube",       .obj= OBJ_CUBE },
+            { .label= "Sphere",     .obj= OBJ_SPHERE },
+            { .label= "Cylinder",   .obj= OBJ_Cylinder },
+            { .label= "Plane",      .obj= OBJ_Plane },
+            { .label= "Cone",       .obj= OBJ_Cone },
+            { .label= "Torus",      .obj= OBJ_Torus },
+            { .label= "SpotLight",  .obj= OBJ_SpotLight },
+            { .label= "Particle",   .obj= OBJ_PARTICLE },
+            { .label= "Text",       .obj= OBJ_Text },
+            {.label = "Fog",        .obj = OBJ_Fog},
             {.label = "Fireball",   .obj = OBJ_Fireball }
             
         };
@@ -332,8 +332,6 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
                         MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Torus.obj"));
                         break;
                     }
-                    
-
                 case OBJ_StaticMesh:
                     {
                         TempActor = World->SpawnActor<AStaticMeshActor>();

@@ -322,6 +322,8 @@ void FRenderer::PrepareLineShader() const
         Graphics->DeviceContext->VSSetShaderResources(2, 1, &pBBSRV);
         Graphics->DeviceContext->VSSetShaderResources(3, 1, &pConeSRV);
         Graphics->DeviceContext->VSSetShaderResources(4, 1, &pOBBSRV);
+        Graphics->DeviceContext->VSSetShaderResources(5, 1, &pCircleSRV);
+
 
     }
 }
@@ -653,7 +655,7 @@ void FRenderer::RenderStaticMeshes()
                         PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Color = PointLight->GetColor();
                         PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Position = PointLight->GetWorldLocation();
                         PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Intensity = PointLight->GetIntensity();
-                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].AttenuationRadius = PointLight->GetAttenuationRadius();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].AttenuationRadius = PointLight->GetRadius();
                         PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].LightFalloffExponent = PointLight->GetLightFalloffExponent();
                         PointLightArrayInfo->PointLightCount++;
                     }
@@ -667,7 +669,7 @@ void FRenderer::RenderStaticMeshes()
                         SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Position = SpotLight->GetWorldLocation();
                         SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Direction = SpotLight->GetForwardVector();
                         SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Intensity = SpotLight->GetIntensity();
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].AttenuationRadius = SpotLight->GetAttenuationRadius();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].AttenuationRadius = SpotLight->GetRadius();
                         SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].InnerConeAngle = SpotLight->GetInnerConeAngle();
                         SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].OuterConeAngle = SpotLight->GetOuterConeAngle();
                         SpotLightArrayInfo->SpotLightCount++;
@@ -899,24 +901,41 @@ void FRenderer::ResetFogUpdates()
 
 void FRenderer::RenderLight()
 {
-    for (auto Light : FireballObjs)
+    for (auto Light : LightObjs)
     {
-        if (Light->GetLightType() == LightType::SpotLight)
+        
+        if (Light->IsA<UPointLightComponent>())
+        {
+            // PointLight를 상속 받은 경우에 대해
+            UPointLightComponent* PointLight = Cast<UPointLightComponent>(Light);
+            if (GEngine->GetWorld()->WorldType == EWorldType::PIE) continue;
+            FMatrix Model = JungleMath::CreateModelMatrix(PointLight->GetWorldLocation(), PointLight->GetWorldRotation(), { 1, 1, 1 });
+            UPrimitiveBatch::GetInstance().AddCircle(PointLight->GetWorldLocation(), PointLight->GetRadius(), 90, PointLight->GetColor(), Model);
+        }
+        if (Light->IsA<USpotLightComponent>())
         {
             USpotLightComponent* SpotLight = Cast<USpotLightComponent>(Light);
             if (SpotLight)
             {
                 if (GEngine->GetWorld()->WorldType == EWorldType::PIE) continue;
-                FMatrix Model = JungleMath::CreateModelMatrix(Light->GetWorldLocation(), Light->GetWorldRotation(), { 1, 1, 1 });
-                UPrimitiveBatch::GetInstance().AddCone(Light->GetWorldLocation(), Light->GetRadius() * tan(SpotLight->GetOuterConeAngle() / 2 * 3.14 / 180.0f), Light->GetRadius(), 140, Light->GetColor(), Model);
-                UPrimitiveBatch::GetInstance().RenderOBB(Light->GetBoundingBox(), Light->GetWorldLocation(), Model);
+                FMatrix Model = JungleMath::CreateModelMatrix(SpotLight->GetWorldLocation(), SpotLight->GetWorldRotation(), { 1, 1, 1 });
+                UPrimitiveBatch::GetInstance().AddCone(SpotLight->GetWorldLocation(), SpotLight->GetRadius() * tan(SpotLight->GetOuterConeAngle() / 2 * 3.14 / 180.0f), SpotLight->GetRadius(), 140, SpotLight->GetColor(), Model);
+                UPrimitiveBatch::GetInstance().RenderOBB(SpotLight->GetBoundingBox(), Light->GetWorldLocation(), Model);
+            }
+        }
+        if (Light->IsA<UDirectionalLightComponent>())
+        {
+            UDirectionalLightComponent* DirectionalLight = Cast<UDirectionalLightComponent>(Light);
+            if (DirectionalLight) 
+            {
+                // TODO: DirectionalLight의 Wireframe
             }
         }
     }
 }
 
 void FRenderer::RenderBatch(
-    const FGridParameters& gridParam, ID3D11Buffer* pVertexBuffer, int boundingBoxCount, int coneCount, int coneSegmentCount, int obbCount
+    const FGridParameters& gridParam, ID3D11Buffer* pVertexBuffer, int boundingBoxCount, int coneCount, int coneSegmentCount, int obbCount, int circleCount, int circleSegmentCount
 ) const
 {
     UINT stride = sizeof(FSimpleVertex);
@@ -925,7 +944,7 @@ void FRenderer::RenderBatch(
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
     UINT vertexCountPerInstance = 2;
-    UINT instanceCount = gridParam.numGridLines + 3 + (boundingBoxCount * 12) + (coneCount * (2 * coneSegmentCount)) + (12 * obbCount);
+    UINT instanceCount = gridParam.numGridLines + 3 + (boundingBoxCount * 12) + (coneCount * (2 * coneSegmentCount)) + (12 * obbCount) + (circleCount * (circleSegmentCount));
     Graphics->DeviceContext->DrawInstanced(vertexCountPerInstance, instanceCount, 0, 0);
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
@@ -1087,6 +1106,12 @@ void FRenderer::RenderOverlayPass()
     FVector4 CamPos4 = FVector4(CamPos.x, CamPos.y, CamPos.z, 1.f);
     float blendFactor[4] = { 0.f, 0.f, 0.f, 0.f };
     Graphics->DeviceContext->OMSetBlendState(Graphics->LineBlendState, blendFactor, 0xffffffff);
+    // LightPass 가 비활성화되었기에
+    // 기존 Light의 Wireframe을 호출해주던 함수를 여기에 위치시킴
+#if USE_GBUFFER
+#else
+    RenderLight();
+#endif
     UPrimitiveBatch::GetInstance().RenderBatch(ConstantBuffer, ActiveViewport->GetViewMatrix(), ActiveViewport->GetProjectionMatrix(), CamPos4);
     Graphics->DeviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
 
@@ -1170,6 +1195,19 @@ ID3D11ShaderResourceView* FRenderer::CreateConeSRV(ID3D11Buffer* pConeBuffer, UI
     return pConeSRV;
 }
 
+ID3D11ShaderResourceView* FRenderer::CreateCircleSRV(ID3D11Buffer* pCircleBuffer, UINT numCircles)
+{
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+    srvDesc.Buffer.ElementOffset = 0;
+    srvDesc.Buffer.NumElements = numCircles;
+
+
+    Graphics->Device->CreateShaderResourceView(pCircleBuffer, &srvDesc, &pCircleSRV);
+    return pCircleSRV;
+}
+
 void FRenderer::UpdateBoundingBoxBuffer(ID3D11Buffer* pBoundingBoxBuffer, const TArray<FBoundingBox>& BoundingBoxes, int numBoundingBoxes) const
 {
     if (!pBoundingBoxBuffer) return;
@@ -1209,6 +1247,19 @@ void FRenderer::UpdateConesBuffer(ID3D11Buffer* pConeBuffer, const TArray<FCone>
     Graphics->DeviceContext->Unmap(pConeBuffer, 0);
 }
 
+void FRenderer::UpdateCirclesBuffer(ID3D11Buffer* pCircleBuffer, const TArray<FCircle>& Circles, int numCircles) const
+{
+    if (!pCircleBuffer) return;
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+    Graphics->DeviceContext->Map(pCircleBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+    auto pData = reinterpret_cast<FCircle*>(mappedResource.pData);
+    for (int i = 0; i < Circles.Num(); ++i)
+    {
+        pData[i] = Circles[i];
+    }
+    Graphics->DeviceContext->Unmap(pCircleBuffer, 0);
+}
+
 void FRenderer::UpdateGridConstantBuffer(const FGridParameters& gridParams) const
 {
     D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -1224,13 +1275,14 @@ void FRenderer::UpdateGridConstantBuffer(const FGridParameters& gridParams) cons
     }
 }
 
-void FRenderer::UpdateLinePrimitveCountBuffer(int numBoundingBoxes, int numCones) const
+void FRenderer::UpdateLinePrimitveCountBuffer(int numBoundingBoxes, int numCones, int numOBBs) const
 {
     D3D11_MAPPED_SUBRESOURCE mappedResource;
     HRESULT hr = Graphics->DeviceContext->Map(LinePrimitiveBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
     auto pData = static_cast<FPrimitiveCounts*>(mappedResource.pData);
     pData->BoundingBoxCount = numBoundingBoxes;
     pData->ConeCount = numCones;
+    pData->OBBCount = numOBBs;
     Graphics->DeviceContext->Unmap(LinePrimitiveBuffer, 0);
 }
 
