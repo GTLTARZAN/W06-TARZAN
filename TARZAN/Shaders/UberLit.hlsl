@@ -3,7 +3,10 @@
 #define NUM_POINT_LIGHT 4
 #define NUM_SPOT_LIGHT 4
 
-#define LIGHTING_MODEL_PHONG 1
+// @todo Implement Compile with Defines
+#define LIGHTING_MODEL_GOURAUD 0
+#define LIGHTING_MODEL_LAMBERT 1
+#define LIGHTING_MODEL_PHONG 0
 
 struct FAmbientLightInfo
 {
