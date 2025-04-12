@@ -99,7 +99,7 @@ public:
     ID3D11SamplerState* LPSamplerState;
 
 public:
-    void Initialize(FGraphicsDevice* graphics);
+    void Initialize(FGraphicsDevice* InGraphics);
    
     //Render
     void RenderPrimitive(ID3D11Buffer* pBuffer, UINT numVertices) const;

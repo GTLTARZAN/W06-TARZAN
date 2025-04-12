@@ -4,25 +4,25 @@
 
 #include "Engine/World.h"
 #include "Actors/Player.h"
-#include "BaseGizmos/GizmoBaseComponent.h"
-#include "Components/Light/LightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/UBillboardComponent.h"
 #include "Components/UParticleSubUVComp.h"
+#include "Components/Light/LightComponent.h"
+#include "Components/Light/SpotLightComponent.h"
+#include "Components/FireballComp.h"
+#include "Components/UHeightFogComponent.h"
+#include "Components/SkySphereComponent.h"
+#include "BaseGizmos/GizmoBaseComponent.h"
 #include "Components/UText.h"
 #include "Components/Material/Material.h"
-#include "D3D11RHI/GraphicDevice.h"
 #include "Launch/EditorEngine.h"
 #include "Math/JungleMath.h"
-#include "UnrealEd/EditorViewportClient.h"
 #include "UnrealEd/PrimitiveBatch.h"
 #include "UObject/Casts.h"
 #include "UObject/Object.h"
 #include "PropertyEditor/ShowFlags.h"
 #include "UObject/UObjectIterator.h"
-#include "Components/SkySphereComponent.h"
-#include "Components/FireballComp.h"
-#include "Components/Light/SpotLightComponent.h"
+#include "D3D11RHI/GraphicDevice.h"
 #include "Renderer/Pass/GBufferPass.h"
 #include "Renderer/Pass/LightingPass.h"
 #include "Renderer/Pass/PostProcessPass.h"
@@ -30,18 +30,16 @@
 #include "Editor/LevelEditor/SLevelEditor.h"
 #include "Runtime/Launch/ImGuiManager.h"
 #include "UnrealEd/UnrealEd.h"
-#include "Components/UHeightFogComponent.h"
-#include "Components/Light/LightComponent.h"
-#include "Components/Light/SpotLightComponent.h"
+#include "UnrealEd/EditorViewportClient.h"
 
 extern UEditorEngine* GEngine;
 
 #pragma region Base
 FRenderer::~FRenderer() {}
 
-void FRenderer::Initialize(FGraphicsDevice* graphics)
+void FRenderer::Initialize(FGraphicsDevice* InGraphics)
 {
-    Graphics = graphics;
+    Graphics = InGraphics;
     RenderResourceManager.Initialize(Graphics->Device);
     ShaderManager.Initialize(Graphics->Device, Graphics->DeviceContext);
     ConstantBufferUpdater.Initialize(Graphics->DeviceContext);
@@ -60,7 +58,7 @@ void FRenderer::Render()
     //DeprecatedRender();
 
     SLevelEditor* LevelEditor = GEngine->GetLevelEditor();
-    std::shared_ptr<FEditorViewportClient> CurrentViewport = LevelEditor->GetActiveViewportClient();
+    const std::shared_ptr<FEditorViewportClient> CurrentViewport = LevelEditor->GetActiveViewportClient();
     World = GEngine->GetWorld();
 
     Graphics->Prepare();
@@ -645,33 +643,26 @@ void FRenderer::RenderStaticMeshes()
         {
             for (int i = 0; i < LightObjs.Num(); i++) 
             {
-                // TODO: LIGHT 관련 클래스 만들고 작업필요합니다.
-                if (LightObjs[i]->IsA<UPointLightComponent>())
+                if (UPointLightComponent* pPointLight = Cast<UPointLightComponent>(LightObjs[i]))
                 {
-                    if (UPointLightComponent* PointLight = Cast<UPointLightComponent>(LightObjs[i]))
-                    {
-                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Color = PointLight->GetColor();
-                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Position = PointLight->GetWorldLocation();
-                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Intensity = PointLight->GetIntensity();
-                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].AttenuationRadius = PointLight->GetAttenuationRadius();
-                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].LightFalloffExponent = PointLight->GetLightFalloffExponent();
-                        PointLightArrayInfo->PointLightCount++;
-                    }
+                    PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Color = pPointLight->GetColor();
+                    PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Position = pPointLight->GetWorldLocation();
+                    PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Intensity = pPointLight->GetIntensity();
+                    PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].AttenuationRadius = pPointLight->GetAttenuationRadius();
+                    PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].LightFalloffExponent = pPointLight->GetLightFalloffExponent();
+                    PointLightArrayInfo->PointLightCount++;
                 }
-                else if (LightObjs[i]->IsA<USpotLightComponent>())
+                if (USpotLightComponent* pSpotLight = Cast<USpotLightComponent>(LightObjs[i]))
                 {
-                    if (USpotLightComponent* SpotLight = Cast<USpotLightComponent>(LightObjs[i]))
-                    {
 
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Color = SpotLight->GetColor();
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Position = SpotLight->GetWorldLocation();
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Direction = SpotLight->GetForwardVector();
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Intensity = SpotLight->GetIntensity();
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].AttenuationRadius = SpotLight->GetAttenuationRadius();
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].InnerConeAngle = SpotLight->GetInnerConeAngle();
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].OuterConeAngle = SpotLight->GetOuterConeAngle();
-                        SpotLightArrayInfo->SpotLightCount++;
-                    }
+                    SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Color = pSpotLight->GetColor();
+                    SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Position = pSpotLight->GetWorldLocation();
+                    SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Direction = pSpotLight->GetForwardVector();
+                    SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Intensity = pSpotLight->GetIntensity();
+                    SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].AttenuationRadius = pSpotLight->GetAttenuationRadius();
+                    SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].InnerConeAngle = pSpotLight->GetInnerConeAngle();
+                    SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].OuterConeAngle = pSpotLight->GetOuterConeAngle();
+                    SpotLightArrayInfo->SpotLightCount++;
                 }
             }
         }

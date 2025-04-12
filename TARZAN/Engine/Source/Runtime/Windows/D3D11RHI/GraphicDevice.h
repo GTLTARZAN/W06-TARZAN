@@ -113,12 +113,12 @@ public:
     void ReleaseBlendState();
     void Release();
     
-    void SwapBuffer();
-    void Prepare();
+    void SwapBuffer() const;
+    void Prepare() const;
     void OnResize(HWND hWindow);
     ID3D11RasterizerState* GetCurrentRasterizer() { return CurrentRasterizer; }
     void ChangeRasterizer(EViewModeIndex evi);
-    void ChangeDepthStencilState(ID3D11DepthStencilState* newDetptStencil);
+    void ChangeDepthStencilState(ID3D11DepthStencilState* newDetptStencil) const;
 
     uint32 GetPixelUUID(POINT pt);
     uint32 DecodeUUIDColor(FVector4 UUIDColor);
