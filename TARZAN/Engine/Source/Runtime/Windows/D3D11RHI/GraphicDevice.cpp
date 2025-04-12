@@ -541,8 +541,12 @@ void FGraphicsDevice::OnResize(HWND hWindow)
 {
     // 먼저 기존 GBuffer 관련 리소스를 해제합니다.
     ReleaseFrameBuffer();
+#if USE_GBUFFER
     ReleaseGBuffer();
     ReleaseLightPassBuffer();
+#else
+    ReleaseUber();
+#endif
 
     if (DepthStencilView)
     {
@@ -565,8 +569,12 @@ void FGraphicsDevice::OnResize(HWND hWindow)
 
     // Buffer 재생성
     CreateFrameBuffer();
+#if USE_GBUFFER
     CreateGBuffer();
     CreateLightPassBuffer();
+#else
+    CreateUber();
+#endif
     CreateDepthStencilBuffer(hWindow);
 }
 
