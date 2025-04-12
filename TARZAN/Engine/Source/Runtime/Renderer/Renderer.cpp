@@ -253,13 +253,14 @@ void FRenderer::PrepareLightShader() const
 
 void FRenderer::PreparePostProcessShader() const
 {
-    //Graphics->DeviceContext->VSSetShader(FullScreenVS, nullptr, 0);
+    Graphics->DeviceContext->VSSetShader(FullScreenVS, nullptr, 0);
     Graphics->DeviceContext->PSSetShader(PostProcessPassPS, nullptr, 0);
-    //Graphics->DeviceContext->IASetInputLayout(FullScreenInputLayout);
+    Graphics->DeviceContext->IASetInputLayout(FullScreenInputLayout);
 
     if (FogConstantBuffer)
     {
         Graphics->DeviceContext->PSSetConstantBuffers(0, 1, &FogConstantBuffer);
+        Graphics->DeviceContext->PSSetConstantBuffers(2, 1, &ScreenConstantBuffer);
     }
 }
 
@@ -1046,6 +1047,7 @@ void FRenderer::RenderPostProcessPass()
 
     // 2. Update Constant
     ConstantBufferUpdater.UpdateFogConstant(FogConstantBuffer, FogData);
+    ConstantBufferUpdater.UpdateScreenConstant(ScreenConstantBuffer, ActiveViewport);
 
     // 3. Set RTV
     ID3D11RenderTargetView* FrameBufferRTV = Graphics->FrameBufferRTV;
