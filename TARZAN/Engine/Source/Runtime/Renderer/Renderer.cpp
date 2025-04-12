@@ -286,13 +286,21 @@ void FRenderer::PrepareSubUVConstant() const
 
 void FRenderer::PrepareGizmoShader() const
 {
+#if USE_GBUFFER
     Graphics->DeviceContext->VSSetShader(GBufferVS, nullptr, 0);
+#else
+    Graphics->DeviceContext->VSSetShader(UberVS, nullptr, 0);
+#endif
     Graphics->DeviceContext->PSSetShader(GizmoPixelShader, nullptr, 0);
 
-    if (ConstantBuffer)
+    if (ObjectMatrixConstantBuffer)
     {
-        Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ConstantBuffer);
-        Graphics->DeviceContext->PSSetConstantBuffers(0, 1, &GMaterialConstantBuffer);
+        Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ObjectMatrixConstantBuffer);
+        Graphics->DeviceContext->VSSetConstantBuffers(1, 1, &CameraConstantBuffer);
+        Graphics->DeviceContext->VSSetConstantBuffers(2, 1, &LightConstantBuffer);
+        Graphics->DeviceContext->VSSetConstantBuffers(3, 1, &MaterialConstantBuffer);
+
+        Graphics->DeviceContext->PSSetConstantBuffers(0, 1, &MaterialConstantBuffer);
     }
 }
 
