@@ -2,18 +2,17 @@
 
 #include "Engine/World.h"
 #include "Actors/Player.h"
-#include "Components/LightComponent.h"
+#include "Components/Light/LightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/UText.h"
 #include "Engine/FLoaderOBJ.h"
 #include "Math/MathUtility.h"
 #include "UnrealEd/ImGuiWidget.h"
 #include "UObject/Casts.h"
-#include "UObject/ObjectFactory.h"
 #include <Components/CubeComp.h>
 #include "Components/FireballComp.h"
 #include "Components/UHeightFogComponent.h"
-#include "SpotLightComp.h"
+#include "Components/Light/SpotLightComponent.h"
 
 #include <Components/UParticleSubUVComp.h>
 #include <Components/Movement/MovementComponent.h>
@@ -394,8 +393,8 @@ void PropertyEditorPanel::Render()
             }
             if (USpotLightComponent* SpotLight= Cast<USpotLightComponent>(fireballObj))
             {
-                float InnerAngle = SpotLight->GetInnerSpotAngle();
-                float OuterAngle = SpotLight->GetOuterSpotAngle();
+                float InnerAngle = SpotLight->GetInnerConeAngle();
+                float OuterAngle = SpotLight->GetOuterConeAngle();
                 float prevInner = InnerAngle;
                 float prevOuter = OuterAngle;
 
@@ -404,8 +403,8 @@ void PropertyEditorPanel::Render()
                     if (InnerAngle > OuterAngle)
                         OuterAngle = InnerAngle;
 
-                    SpotLight->SetInnerSpotAngle(InnerAngle);
-                    SpotLight->SetOuterSpotAngle(OuterAngle);
+                    SpotLight->SetInnerConeAngle(InnerAngle);
+                    SpotLight->SetOuterConeAngle(OuterAngle);
                 }
 
                 if (ImGui::SliderFloat("OuterAngle", &OuterAngle, 1.0f, 90.0f))
@@ -413,8 +412,8 @@ void PropertyEditorPanel::Render()
                     if (OuterAngle < InnerAngle)
                         InnerAngle = OuterAngle;
 
-                    SpotLight->SetOuterSpotAngle(OuterAngle);
-                    SpotLight->SetInnerSpotAngle(InnerAngle);
+                    SpotLight->SetOuterConeAngle(OuterAngle);
+                    SpotLight->SetInnerConeAngle(InnerAngle);
                 }
 
           }

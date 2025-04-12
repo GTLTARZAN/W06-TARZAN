@@ -5,7 +5,7 @@
 #include "Engine/World.h"
 #include "Actors/Player.h"
 #include "BaseGizmos/GizmoBaseComponent.h"
-#include "Components/LightComponent.h"
+#include "Components/Light/LightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/UBillboardComponent.h"
 #include "Components/UParticleSubUVComp.h"
@@ -22,7 +22,7 @@
 #include "UObject/UObjectIterator.h"
 #include "Components/SkySphereComponent.h"
 #include "Components/FireballComp.h"
-#include "SpotLightComp.h"
+#include "Components/Light/SpotLightComponent.h"
 #include "Renderer/Pass/GBufferPass.h"
 #include "Renderer/Pass/LightingPass.h"
 #include "Renderer/Pass/PostProcessPass.h"
@@ -31,6 +31,8 @@
 #include "Runtime/Launch/ImGuiManager.h"
 #include "UnrealEd/UnrealEd.h"
 #include "Components/UHeightFogComponent.h"
+#include "Components/Light/LightComponent.h"
+#include "Components/Light/SpotLightComponent.h"
 
 extern UEditorEngine* GEngine;
 
@@ -624,7 +626,7 @@ void FRenderer::RenderStaticMeshes()
         FDirectionalLightInfo DirectionalLight =
         {
             .Color = FLinearColor(1.f, 1.f, 1.f, 1.f),
-            .Direction = FVector4(1, -1, -1, 1),
+            .Direction = FVector(1, -1, -1),
             .Intensity = 1
         };
         // Point Light
@@ -635,15 +637,42 @@ void FRenderer::RenderStaticMeshes()
             for (int i = 0; i < LightObjs.Num(); i++) 
             {
                 // TODO: LIGHT 관련 클래스 만들고 작업필요합니다.
+                if (LightObjs[i]->IsA<UPointLightComponent>())
+                {
+                    if (UPointLightComponent* PointLight = Cast<UPointLightComponent>(LightObjs[i]))
+                    {
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Color = PointLight->GetColor();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Position = PointLight->GetWorldLocation();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Intensity = PointLight->GetIntensity();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].AttenuationRadius = PointLight->GetAttenuationRadius();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].LightFalloffExponent = PointLight->GetLightFalloffExponent();
+                        PointLightArrayInfo->PointLightCount++;
+                    }
+                }
+                else if (LightObjs[i]->IsA<USpotLightComponent>())
+                {
+                    if (USpotLightComponent* SpotLight = Cast<USpotLightComponent>(LightObjs[i]))
+                    {
+
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Color = SpotLight->GetColor();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Position = SpotLight->GetWorldLocation();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Direction = SpotLight->GetForwardVector();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Intensity = SpotLight->GetIntensity();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].AttenuationRadius = SpotLight->GetAttenuationRadius();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].InnerConeAngle = SpotLight->GetInnerConeAngle();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].OuterConeAngle = SpotLight->GetOuterConeAngle();
+                        SpotLightArrayInfo->SpotLightCount++;
+                    }
+                }
             }
         }
 
         std::unique_ptr<FFireballArrayInfo> fireballArrayInfo = std::make_unique<FFireballArrayInfo>();
-
+        
         if (FireballObjs.Num() > 0)
         {
             fireballArrayInfo->FireballCount = 0;
-
+        
             for (int i = 0; i < FireballObjs.Num(); i++)
             {
                 if (FireballObjs[i] != nullptr)
@@ -657,8 +686,8 @@ void FRenderer::RenderStaticMeshes()
                     fireballArrayInfo->FireballConstants[i].LightType = fireballInfo.Type;
                     if (USpotLightComponent* spotLight = Cast<USpotLightComponent>(FireballObjs[i]))
                     {
-                        fireballArrayInfo->FireballConstants[i].InnerAngle = spotLight->GetInnerSpotAngle();
-                        fireballArrayInfo->FireballConstants[i].OuterAngle = spotLight->GetOuterSpotAngle();
+                        fireballArrayInfo->FireballConstants[i].InnerAngle = spotLight->GetInnerConeAngle();
+                        fireballArrayInfo->FireballConstants[i].OuterAngle = spotLight->GetOuterConeAngle();
                         fireballArrayInfo->FireballConstants[i].Direction = spotLight->GetForwardVector();
                     }
                     fireballArrayInfo->FireballCount++;
@@ -870,7 +899,7 @@ void FRenderer::RenderLight()
             {
                 if (GEngine->GetWorld()->WorldType == EWorldType::PIE) continue;
                 FMatrix Model = JungleMath::CreateModelMatrix(Light->GetWorldLocation(), Light->GetWorldRotation(), { 1, 1, 1 });
-                UPrimitiveBatch::GetInstance().AddCone(Light->GetWorldLocation(), Light->GetRadius() * tan(SpotLight->GetOuterSpotAngle() / 2 * 3.14 / 180.0f), Light->GetRadius(), 140, Light->GetColor(), Model);
+                UPrimitiveBatch::GetInstance().AddCone(Light->GetWorldLocation(), Light->GetRadius() * tan(SpotLight->GetOuterConeAngle() / 2 * 3.14 / 180.0f), Light->GetRadius(), 140, Light->GetColor(), Model);
                 UPrimitiveBatch::GetInstance().RenderOBB(Light->GetBoundingBox(), Light->GetWorldLocation(), Model);
             }
         }
@@ -966,8 +995,8 @@ void FRenderer::RenderLightPass()
                 fireballArrayInfo->FireballConstants[i].LightType = fireballInfo.Type;
                 if (USpotLightComponent* spotLight = Cast<USpotLightComponent>(FireballObjs[i]))
                 {
-                    fireballArrayInfo->FireballConstants[i].InnerAngle = spotLight->GetInnerSpotAngle();
-                    fireballArrayInfo->FireballConstants[i].OuterAngle = spotLight->GetOuterSpotAngle();
+                    fireballArrayInfo->FireballConstants[i].InnerAngle = spotLight->GetInnerConeAngle();
+                    fireballArrayInfo->FireballConstants[i].OuterAngle = spotLight->GetOuterConeAngle();
                     fireballArrayInfo->FireballConstants[i].Direction = spotLight->GetForwardVector();
                 }
                 fireballArrayInfo->FireballCount++;

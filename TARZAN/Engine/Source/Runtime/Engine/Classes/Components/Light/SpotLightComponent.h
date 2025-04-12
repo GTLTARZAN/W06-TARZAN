@@ -1,28 +1,32 @@
 #pragma once
-#include "Components/FireballComp.h"
+#include "LightComponent.h"
 
-class USpotLightComponent : public UFireballComponent
+class USpotLightComponent : public UPointLightComponent
 {
-    DECLARE_CLASS(USpotLightComponent, UFireballComponent)
+    DECLARE_CLASS(USpotLightComponent, UPointLightComponent)
+
 public:
     USpotLightComponent();
     USpotLightComponent(const USpotLightComponent& Other);
     virtual ~USpotLightComponent() override;
+
     virtual void InitializeComponent() override;
     virtual void TickComponent(float DeltaTime) override;
-    float GetInnerSpotAngle() const { return InnerSpotAngle; }
-    void SetInnerSpotAngle(float angle) { InnerSpotAngle = angle;}
-    float GetOuterSpotAngle() const { return OuterSpotAngle; }
-    void SetOuterSpotAngle(float angle) { OuterSpotAngle = angle; }
+
+    FVector GetDirection() { return GetForwardVector(); }
+    float GetInnerConeAngle() const { return InnerConeAngle; }
+    void SetInnerConeAngle(float angle) { InnerConeAngle = angle;}
+    float GetOuterConeAngle() const { return OuterConeAngle; }
+    void SetOuterConeAngle(float angle) { OuterConeAngle = angle; }
 
     virtual UObject* Duplicate() const override;
     virtual void DuplicateSubObjects(const UObject* Source) override;
     virtual void PostDuplicate() override;
 
     void GetProperties(TMap<FString, FString>& OutProperties) const override;
-    
     void SetProperties(const TMap<FString, FString>& InProperties) override;
-private:
-    float InnerSpotAngle;
-    float OuterSpotAngle;
+    
+protected:
+    float InnerConeAngle;
+    float OuterConeAngle;
 };

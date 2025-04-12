@@ -9,7 +9,7 @@
 
 #include "EditorViewportClient.h"
 #include "Components/UBillboardComponent.h"
-#include "Components/LightComponent.h"
+#include "Components/Light/LightComponent.h"
 #include "Components/SkySphereComponent.h"
 #include "Camera/CameraComponent.h"
 #include "UObject/Casts.h"

@@ -12,34 +12,37 @@ struct FAmbientLightInfo
 {
     float4 Color;
     float Intensity;
+    float3 Pad;
 };
 
 struct FDirectionalLightInfo
 {
     float4 Color;
-    float4 Direction;
+    float3 Direction;
     float Intensity;
 };
 
 struct FPointLightInfo
 {
     float4 Color;
-    float4 Position;
+    float3 Position;
     float Intensity;
     float AttenuationRadius;
     float LightFalloffExponent;
+    float2 Pad;
 };
 
 struct FSpotLightInfo
 {
     float4 Color;
-    float4 Position;
-    float4 Direction;
+    float3 Position;
+    float3 Direction;
     float Intensity;
     float AttenuationRadius;
     float LightFalloffExponent;
     float InnerConeAngle;
     float OuterConeAngle;
+    float Pad;
 };
 
 struct FMaterialInfo
