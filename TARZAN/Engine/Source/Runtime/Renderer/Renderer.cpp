@@ -1053,8 +1053,13 @@ void FRenderer::RenderPostProcessPass()
 
     // 4. Set SRV
     ID3D11ShaderResourceView* SRVs[] = {
+#if USE_GBUFFER
         Graphics->LightPassSRV_Color,
         Graphics->LightPassSRV_Position
+#else
+        Graphics->UberSRV_Color,
+        Graphics->UberSRV_Position
+#endif
     };
     Graphics->DeviceContext->PSSetShaderResources(0, 2, SRVs);
 
