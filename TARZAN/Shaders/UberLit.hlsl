@@ -159,6 +159,12 @@ struct VS_OUT
     float2 TexCoord : TEXCOORD2;
 };
 
+struct PS_OUT
+{
+    float4 Color : SV_Target0;
+    float4 WorldPos : SV_Target1;
+};
+
 VS_OUT Uber_VS(VS_IN Input)
 {
     VS_OUT output;
@@ -193,8 +199,9 @@ VS_OUT Uber_VS(VS_IN Input)
     return output;
 }
 
-float4 Uber_PS(VS_OUT Input) : SV_TARGET
+PS_OUT Uber_PS(VS_OUT Input)
 {
+    PS_OUT Output;
     float4 finalPixel;
      
 #if LIGHTING_MODEL_GOURAUD
@@ -237,7 +244,10 @@ float4 Uber_PS(VS_OUT Input) : SV_TARGET
     finalPixel = finalColor;
 #endif
     
-    return finalPixel;
+    Output.Color = finalPixel;
+    Output.WorldPos = float4(Input.WorldPos.xyz, 0.5f);
+    
+    return Output;
 }
 
 #if LIGHTING_MODEL_PHONG
