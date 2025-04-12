@@ -24,7 +24,6 @@
 
 #include "UserInterface/Console.h"
 
-
 struct FVertexSimple
 {
     float x, y, z;    // Position
@@ -32,6 +31,16 @@ struct FVertexSimple
     float nx, ny, nz;
     float u=0, v=0;
     uint32 MaterialIndex;
+};
+
+struct FVertexUnlit
+{
+    //FVector Position;
+    //FLinearColor Color;
+    //FVector2D UV;
+    float x, y, z;
+    float r, g, b, a;
+    float u = 0, v = 0;
 };
 
 // Material Subset

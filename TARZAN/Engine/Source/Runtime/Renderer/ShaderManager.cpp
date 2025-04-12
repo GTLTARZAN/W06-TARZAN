@@ -30,7 +30,7 @@ bool FShaderManager::CreateVertexShader(
     HRESULT hr = D3DCompileFromFile(vsPath.c_str(), nullptr, nullptr, *vsEntry, "vs_5_0", shaderFlags, 0, &vsBlob, nullptr);
     if (FAILED(hr)) return false;
 
-    hr = Device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &outVS);
+     hr = Device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &outVS);
     if (FAILED(hr)) { vsBlob->Release(); return false; }
 
     if (outInputLayout)
@@ -38,7 +38,6 @@ bool FShaderManager::CreateVertexShader(
         hr = Device->CreateInputLayout(inputLayoutDesc, numElements, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), outInputLayout);
         if (FAILED(hr)) { vsBlob->Release(); return false; }
     }
-
     if (outStride)
         *outStride = vertexSize;
 

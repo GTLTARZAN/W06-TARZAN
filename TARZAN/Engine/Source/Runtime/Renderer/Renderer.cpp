@@ -154,7 +154,8 @@ void FRenderer::CreateShader()
 
     ShaderManager.CreatePixelShader(L"Shaders/LightingPassPixelShader.hlsl", "main", LightingPassPS);
 #else
-    D3D11_INPUT_ELEMENT_DESC UberLayout[] = {
+    D3D11_INPUT_ELEMENT_DESC UberLayout[] = 
+    {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -167,6 +168,17 @@ void FRenderer::CreateShader()
     
     ShaderManager.CreatePixelShader(L"Shaders/UberLit.hlsl", "Uber_PS", UberPS);
 
+    D3D11_INPUT_ELEMENT_DESC UberUnlitLayout[] = 
+    {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+    };
+
+    ShaderManager.CreateVertexShader(L"Shaders/UberUnlit.hlsl", "UberUnlit_VS",
+        UberUnlitVS, UberUnlitLayout, ARRAYSIZE(UberUnlitLayout), &UberUnlitInputLayout, &Stride, sizeof(FVertexUnlit));
+
+    ShaderManager.CreatePixelShader(L"Shaders/UberUnlit.hlsl", "UberUnlit_PS", UberUnlitPS);
 #endif
 
     ShaderManager.CreatePixelShader(L"Shaders/GizmoPixelShader.hlsl", "main", GizmoPixelShader);
@@ -210,7 +222,7 @@ void FRenderer::PrepareUberShader() const
     Graphics->DeviceContext->PSSetShader(UberPS, nullptr, 0);
     Graphics->DeviceContext->IASetInputLayout(UberInputLayout);
 
-    if (ConstantBuffer)
+    if (ObjectMatrixConstantBuffer)
     {
         Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ObjectMatrixConstantBuffer);
         Graphics->DeviceContext->VSSetConstantBuffers(1, 1, &CameraConstantBuffer);
@@ -219,6 +231,18 @@ void FRenderer::PrepareUberShader() const
 
         Graphics->DeviceContext->PSSetConstantBuffers(2, 1, &LightConstantBuffer);
         Graphics->DeviceContext->PSSetConstantBuffers(3, 1, &MaterialConstantBuffer);
+    }
+}
+
+void FRenderer::PrepareUberUnlitShader() const
+{
+    Graphics->DeviceContext->VSSetShader(UberUnlitVS, nullptr, 0);
+    Graphics->DeviceContext->PSSetShader(UberUnlitPS, nullptr, 0);
+    Graphics->DeviceContext->IASetInputLayout(UberUnlitInputLayout);
+
+    if (ObjectMatrixConstantBuffer)
+    {
+        Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ObjectMatrixConstantBuffer);
     }
 }
 
@@ -809,6 +833,8 @@ void FRenderer::RenderBillboards()
 #if USE_GBUFFER
     PrepareTextureShader();
     PrepareSubUVConstant();
+#else
+    PrepareUberUnlitShader();
 #endif
     for (auto BillboardComp : BillboardObjs)
     {
@@ -816,6 +842,7 @@ void FRenderer::RenderBillboards()
 
         FMatrix Model = BillboardComp->CreateBillboardMatrix();
 
+#if USE_GBUFFER
         // 최종 MVP 행렬
         FMatrix MVP = Model * ActiveViewport->GetViewMatrix() * ActiveViewport->GetProjectionMatrix();
         FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(Model));
@@ -824,6 +851,15 @@ void FRenderer::RenderBillboards()
             ConstantBufferUpdater.UpdateConstant(ConstantBuffer, MVP, Model, NormalMatrix, UUIDColor, true);
         else
             ConstantBufferUpdater.UpdateConstant(ConstantBuffer, MVP, Model, NormalMatrix, UUIDColor, false);
+#else
+        FMatrixConstants MatrixConstant =
+        {
+            .World = Model,
+            .View = ActiveViewport->GetViewMatrix(),
+            .Projection = ActiveViewport->GetProjectionMatrix()
+        };
+        ConstantBufferUpdater.UpdateObjectMatrixConstants(ObjectMatrixConstantBuffer, MatrixConstant);
+#endif
 
         if (UParticleSubUVComp* SubUVParticle = Cast<UParticleSubUVComp>(BillboardComp))
         {
@@ -961,7 +997,7 @@ void FRenderer::RenderGBuffer()
 }
 
 void FRenderer::RenderLightPass()
-{
+{  
     PrepareLightShader();
 
     //ID3D11RenderTargetView* rtv = Graphics->FrameBufferRTV;
