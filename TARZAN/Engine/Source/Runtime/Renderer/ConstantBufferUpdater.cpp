@@ -207,13 +207,13 @@ void FConstantBufferUpdater::UpdateScreenConstant(ID3D11Buffer* ScreenConstantBu
     }
 }
 
-void FConstantBufferUpdater::UpdateObjectMatrixConstants(ID3D11Buffer* ObjectMatrixConstantBuffer, const FMatrixConstants& ObjectMatrix) const
+void FConstantBufferUpdater::UpdateObjectMatrixConstants(ID3D11Buffer* ObjectMatrixConstantBuffer, const FObjectMatrixConstants& ObjectMatrix) const
 {
     if (ObjectMatrixConstantBuffer)
     {
         D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
         DeviceContext->Map(ObjectMatrixConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
-        auto constants = static_cast<FMatrixConstants*>(constantbufferMSR.pData);
+        auto constants = static_cast<FObjectMatrixConstants*>(constantbufferMSR.pData);
         constants->World = ObjectMatrix.World;
         constants->View = ObjectMatrix.View;
         constants->Projection = ObjectMatrix.Projection;

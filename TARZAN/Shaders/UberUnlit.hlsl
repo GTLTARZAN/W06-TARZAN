@@ -6,7 +6,7 @@ cbuffer ObjectMatrixConstant : register(b0)
 }
 
 Texture2D g_Texture : register(t0);
-SamplerState g_sampler : register(s0);
+SamplerState g_Sampler : register(s0);
 
 struct VS_INPUT
 {
@@ -36,7 +36,7 @@ PS_INPUT UberUnlit_VS(VS_INPUT Input)
     float4 worldPos = mul(float4(Input.Position, 1.0f), World);
     Output.Position = mul(worldPos, mul(View, Projection));
     Output.WorldPos = worldPos.xyz;
-    Output.Color = float4(Input.Color.xyz, 1);
+    Output.Color = Input.Color;
     Output.UV = Input.UV;
     
     return Output;
@@ -46,7 +46,7 @@ PS_OUTPUT UberUnlit_PS(PS_INPUT Input)
 {
     PS_OUTPUT Output;
     
-    float4 textureColor = g_Texture.Sample(g_sampler, Input.UV);
+    float4 textureColor = g_Texture.Sample(g_Sampler, Input.UV);
     bool isValidTexture = dot(textureColor, float4(1, 1, 1, 1)) > 1e-5f;
     
     if (isValidTexture)
@@ -59,6 +59,8 @@ PS_OUTPUT UberUnlit_PS(PS_INPUT Input)
     }
     
     Output.WorldPos = float4(Input.WorldPos.xyz, 0.5f);
+    
+    //Output.Color = float4(Input.UV.x, Input.UV.y, 0, 1);
     
     return Output;
 }

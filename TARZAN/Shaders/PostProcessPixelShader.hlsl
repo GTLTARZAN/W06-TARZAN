@@ -88,6 +88,7 @@ PS_OUTPUT mainPS(PS_INPUT input) : SV_TARGET
 
     float fogFactor;
     float3 fogColor;
+    float3 TestColor;
     if (DisableFog < 0.5f)
     {
         if (isValid == 0.5f)

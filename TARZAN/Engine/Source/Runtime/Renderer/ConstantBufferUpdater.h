@@ -24,7 +24,7 @@ public:
     void UpdateFogConstant(ID3D11Buffer* FogConstantBuffer, const FFogConstants& FogConstants) const;
     void UpdateScreenConstant(ID3D11Buffer* ScreenConstantBuffer, std::shared_ptr<FEditorViewportClient>viewport) const;
 
-    void UpdateObjectMatrixConstants(ID3D11Buffer* ObjectMatrixConstantBuffer, const FMatrixConstants& ObjectMatrix) const;
+    void UpdateObjectMatrixConstants(ID3D11Buffer* ObjectMatrixConstantBuffer, const FObjectMatrixConstants& ObjectMatrix) const;
     void UpdateCameraPositionConstants(ID3D11Buffer* CameraConstantBuffer, const FCameraConstant& CameraPosition) const;
     void UpdateLightConstants(ID3D11Buffer* LightConstantBuffer, const FLightConstants& Light) const;
     void UpdateMaterialConstants(ID3D11Buffer* MaterialConstantBuffer, const FMaterialConstants& Material) const;

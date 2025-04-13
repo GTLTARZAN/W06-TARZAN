@@ -174,7 +174,7 @@ void FRenderer::CreateShader()
     };
 
     ShaderManager.CreateVertexShader(L"Shaders/UberUnlit.hlsl", "UberUnlit_VS",
-        UberUnlitVS, UberUnlitLayout, ARRAYSIZE(UberUnlitLayout), &UberUnlitInputLayout, &Stride, sizeof(FVertexUnlit));
+        UberUnlitVS, UberUnlitLayout, ARRAYSIZE(UberUnlitLayout), &UberUnlitInputLayout, &Stride2, sizeof(FVertexUnlit));
 
     ShaderManager.CreatePixelShader(L"Shaders/UberUnlit.hlsl", "UberUnlit_PS", UberUnlitPS);
 #endif
@@ -312,16 +312,13 @@ void FRenderer::PrepareGizmoShader() const
 #if USE_GBUFFER
     Graphics->DeviceContext->VSSetShader(GBufferVS, nullptr, 0);
 #else
-    Graphics->DeviceContext->VSSetShader(UberVS, nullptr, 0);
+    Graphics->DeviceContext->VSSetShader(UberUnlitVS, nullptr, 0);
 #endif
     Graphics->DeviceContext->PSSetShader(GizmoPixelShader, nullptr, 0);
 
     if (ObjectMatrixConstantBuffer)
     {
         Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ObjectMatrixConstantBuffer);
-        Graphics->DeviceContext->VSSetConstantBuffers(1, 1, &CameraConstantBuffer);
-        Graphics->DeviceContext->VSSetConstantBuffers(2, 1, &LightConstantBuffer);
-        Graphics->DeviceContext->VSSetConstantBuffers(3, 1, &MaterialConstantBuffer);
 
         Graphics->DeviceContext->PSSetConstantBuffers(0, 1, &MaterialConstantBuffer);
     }
@@ -369,7 +366,7 @@ void FRenderer::CreateConstantBuffer()
 #if USE_GBUFFER
     GMaterialConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FMaterialConstants));
 #else
-    ObjectMatrixConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FMatrixConstants));
+    ObjectMatrixConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FObjectMatrixConstants));
     CameraConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FCameraConstant));
     LightConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FLightConstants));
     MaterialConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FMaterialConstants));
@@ -636,7 +633,7 @@ void FRenderer::RenderStaticMeshes()
             StaticMeshComp->GetWorldScale()
         );
         
-        FMatrixConstants MatrixConstant =
+        FObjectMatrixConstants MatrixConstant =
         {
             .World = Model,
             .View = ActiveViewport->GetViewMatrix(),
@@ -802,6 +799,7 @@ void FRenderer::RenderGizmos()
             GizmoComp->GetWorldRotation(),
             GizmoComp->GetWorldScale()
         );
+#if USE_GBUFFER
         FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(Model));
         FVector4 UUIDColor = GizmoComp->EncodeUUID() / 255.0f;
 
@@ -811,7 +809,15 @@ void FRenderer::RenderGizmos()
             ConstantBufferUpdater.UpdateConstant(ConstantBuffer, MVP, Model, NormalMatrix, UUIDColor, true);
         else
             ConstantBufferUpdater.UpdateConstant(ConstantBuffer, MVP, Model, NormalMatrix, UUIDColor, false);
+#else
+        FObjectMatrixConstants objMatrixConstatnts = {
+            .World = Model,
+            .View = ActiveViewport->GetViewMatrix(),
+            .Projection = ActiveViewport->GetProjectionMatrix()
+        };
 
+        ConstantBufferUpdater.UpdateObjectMatrixConstants(ObjectMatrixConstantBuffer, objMatrixConstatnts);
+#endif
         if (!GizmoComp->GetStaticMesh()) continue;
 
         OBJ::FStaticMeshRenderData* renderData = GizmoComp->GetStaticMesh()->GetRenderData();
@@ -830,7 +836,7 @@ void FRenderer::RenderGizmos()
 
 void FRenderer::RenderBillboards()
 {
-#if USE_GBUFFER
+#if !USE_GBUFFER
     PrepareTextureShader();
     PrepareSubUVConstant();
 #else
@@ -842,7 +848,7 @@ void FRenderer::RenderBillboards()
 
         FMatrix Model = BillboardComp->CreateBillboardMatrix();
 
-#if USE_GBUFFER
+#if !USE_GBUFFER
         // 최종 MVP 행렬
         FMatrix MVP = Model * ActiveViewport->GetViewMatrix() * ActiveViewport->GetProjectionMatrix();
         FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(Model));
@@ -852,7 +858,7 @@ void FRenderer::RenderBillboards()
         else
             ConstantBufferUpdater.UpdateConstant(ConstantBuffer, MVP, Model, NormalMatrix, UUIDColor, false);
 #else
-        FMatrixConstants MatrixConstant =
+        FObjectMatrixConstants MatrixConstant =
         {
             .World = Model,
             .View = ActiveViewport->GetViewMatrix(),

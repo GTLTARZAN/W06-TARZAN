@@ -5,14 +5,12 @@
 
 struct FQuadRenderData
 {
-
     ID3D11Buffer* VertexTextureBuffer = nullptr;
     ID3D11Buffer* IndexTextureBuffer= nullptr;
 
     UINT numVertices = 0;
     UINT numIndices = 0;
 };
-
 
 class FRenderer;
 class FGraphicsDevice;
