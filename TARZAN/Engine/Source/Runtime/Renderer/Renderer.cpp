@@ -161,10 +161,10 @@ void FRenderer::CreateShader()
         {"MATERIAL_INDEX", 0, DXGI_FORMAT_R32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
     };
 
-    ShaderManager.CreateVertexShader(L"Shaders/UberLit.hlsl", "Uber_VS",
+    ShaderManager.CreateVertexShader(L"Shaders/Uber.hlsl", "Uber_VS",
         UberVS, UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout, &Stride, sizeof(FVertexSimple));
     
-    ShaderManager.CreatePixelShader(L"Shaders/UberLit.hlsl", "Uber_PS", UberPS);
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", UberPS);
 
     D3D11_INPUT_ELEMENT_DESC UberUnlitLayout[] = 
     {

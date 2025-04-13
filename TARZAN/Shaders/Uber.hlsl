@@ -1,4 +1,4 @@
-// UberLit.hlsl
+// Uber.hlsl
 
 #define NUM_POINT_LIGHT 4
 #define NUM_SPOT_LIGHT 4
