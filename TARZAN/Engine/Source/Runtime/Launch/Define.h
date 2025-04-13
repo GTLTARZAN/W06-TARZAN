@@ -321,7 +321,7 @@ struct FConstants {
 };
 
 #pragma region Uber
-struct FMatrixConstants 
+struct FObjectMatrixConstants 
 {
     FMatrix World;
     FMatrix View;

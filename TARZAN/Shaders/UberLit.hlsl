@@ -4,9 +4,10 @@
 #define NUM_SPOT_LIGHT 4
 
 // @todo Implement Compile with Defines
-#define LIGHTING_MODEL_GOURAUD 1
-#define LIGHTING_MODEL_LAMBERT 0
+#define LIGHTING_MODEL_GOURAUD 0
+#define LIGHTING_MODEL_LAMBERT 1
 #define LIGHTING_MODEL_PHONG 0
+#define UNLIT 0
 
 struct FAmbientLightInfo
 {
@@ -83,6 +84,10 @@ cbuffer MaterialConstant : register(b3)
     FMaterialInfo Material;
 };
 
+Texture2D g_Texture : register(t0);
+Texture2D g_NormalMap : register(t1);
+SamplerState g_Sampler : register(s0);
+
 float4 CalculateAmbientLight(FAmbientLightInfo info)
 {
     return info.Color * info.Intensity;
@@ -146,8 +151,10 @@ float4 CalculateSpotLightBlinnPhong(FSpotLightInfo info, float3 worldPos, float3
 struct VS_IN
 {
     float3 Position : POSITION;
+    float4 Color : COLOR;
     float3 Normal : NORMAL;
-    float2 TexCoord : TEXCOORD0;
+    float2 TexCoord : TEXCOORD;
+    float MaterialIndex : MATERIAL_INDEX;
 };
 
 struct VS_OUT
@@ -193,6 +200,8 @@ VS_OUT Uber_VS(VS_IN Input)
 #elif LIGHTING_MODEL_LAMBERT
     output.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);
 #elif LIGHTING_MODEL_PHONG
+    output.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+#elif UNLIT
     output.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);
 #endif
     
@@ -242,6 +251,18 @@ PS_OUT Uber_PS(VS_OUT Input)
     }
     
     finalPixel = finalColor;
+#elif UNLIT
+    float4 textureColor = g_Texture.Sample(g_Sampler, Input.TexCoord);
+    bool isValidTexture = dot(textureColor, float4(1, 1, 1, 1)) > 1e-5f;
+    
+    if (isValidTexture)
+    {
+        Output.Color = textureColor;
+    }
+    else
+    {
+        Output.Color = float4(Input.Color.rgb, 1.f);
+    }
 #endif
     
     Output.Color = finalPixel;
