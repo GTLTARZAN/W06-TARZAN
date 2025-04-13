@@ -47,8 +47,7 @@ public:
     ID3D11InputLayout* FullScreenInputLayout = nullptr;
     
 #pragma region UberShader
-    // Shading Model
-    LightingModel currentLightingModel = LightingModel::Lambert;
+    // Shading Model은 ViewPort마다 지정
 
     // Uber Input Layout
     ID3D11InputLayout* UberInputLayout = nullptr;

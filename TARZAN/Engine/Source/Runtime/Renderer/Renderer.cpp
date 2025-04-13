@@ -163,23 +163,23 @@ void FRenderer::CreateShader()
 
     // Create NormalVertxShader
     ShaderManager.CreateVertexShader(L"Shaders/Uber.hlsl", "Uber_VS",
-        NormalVS, UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout, &Stride, sizeof(FVertexSimple), LightingModel::Lambert);
+        NormalVS, UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout, &Stride, sizeof(FVertexSimple), ELightingModel::Lambert);
     
     // Create GouraudVertexShader
     ShaderManager.CreateVertexShader(L"Shaders/Uber.hlsl", "Uber_VS",
-        GouraudVS, UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout, &Stride, sizeof(FVertexSimple), LightingModel::Gouraud);
+        GouraudVS, UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout, &Stride, sizeof(FVertexSimple), ELightingModel::Gouraud);
 
     // Create UnlitPixelShader
-    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", UnlitPS, LightingModel::Unlit);
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", UnlitPS, ELightingModel::Unlit);
 
     // Create GouraudPixelShader
-    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", GouraudPS, LightingModel::Gouraud);
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", GouraudPS, ELightingModel::Gouraud);
 
     // Create LambertPixelShader
-    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", LambertPS, LightingModel::Lambert);
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", LambertPS, ELightingModel::Lambert);
 
     // Create BlinnPhongPixelShader
-    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", BlinnPhongPS, LightingModel::BlinnPhong);
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", BlinnPhongPS, ELightingModel::BlinnPhong);
 
 #endif
 
@@ -231,24 +231,24 @@ void FRenderer::PrepareUberShader() const
 {
     Graphics->DeviceContext->IASetInputLayout(UberInputLayout);
 
-    switch (currentLightingModel)
+    switch (ActiveViewport->GetLighitingModel())
     {
-    case LightingModel::None:
+    case ELightingModel::None:
         UE_LOG(LogLevel::Display, "No LightingModel");
         break;
-    case LightingModel::Gouraud:
+    case ELightingModel::Gouraud:
         Graphics->DeviceContext->VSSetShader(GouraudVS, nullptr, 0);
         Graphics->DeviceContext->PSSetShader(GouraudPS, nullptr, 0);
         break;
-    case LightingModel::Lambert:
+    case ELightingModel::Lambert:
         Graphics->DeviceContext->VSSetShader(NormalVS, nullptr, 0);
         Graphics->DeviceContext->PSSetShader(LambertPS, nullptr, 0);
         break;
-    case LightingModel::BlinnPhong:
+    case ELightingModel::BlinnPhong:
         Graphics->DeviceContext->VSSetShader(NormalVS, nullptr, 0);
         Graphics->DeviceContext->PSSetShader(BlinnPhongPS, nullptr, 0);
         break;
-    case LightingModel::Unlit:
+    case ELightingModel::Unlit:
         Graphics->DeviceContext->VSSetShader(NormalVS, nullptr, 0);
         Graphics->DeviceContext->PSSetShader(UnlitPS, nullptr, 0);
         break;

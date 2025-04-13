@@ -4,7 +4,7 @@
 #include <string>
 #include <Container/String.h>
 
-enum class LightingModel 
+enum class ELightingModel 
 {
     None,
     Gouraud,
@@ -28,13 +28,13 @@ public:
         ID3D11InputLayout** outInputLayout = nullptr,
         UINT* outStride = nullptr,
         UINT vertexSize = 0,
-        LightingModel lightingModel = LightingModel::None);
+        ELightingModel lightingModel = ELightingModel::None);
 
     bool CreatePixelShader(
         const FWString& psPath,
         const FString& psEntry,
         ID3D11PixelShader*& outPS,
-        LightingModel lightingModel = LightingModel::None);
+        ELightingModel lightingModel = ELightingModel::None);
 
     void ReleaseShader(ID3D11InputLayout* layout, ID3D11VertexShader* vs, ID3D11PixelShader* ps);
 

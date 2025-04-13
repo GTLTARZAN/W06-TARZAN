@@ -21,7 +21,7 @@ bool FShaderManager::CreateVertexShader(
     ID3D11InputLayout** outInputLayout,
     UINT* outStride,
     UINT vertexSize,
-    LightingModel lightingModel)
+    ELightingModel lightingModel)
 {
     DWORD shaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
     shaderFlags |= D3DCOMPILE_DEBUG;
@@ -46,11 +46,11 @@ bool FShaderManager::CreateVertexShader(
 
     switch (lightingModel)
     {
-    case LightingModel::Gouraud:
+    case ELightingModel::Gouraud:
         defines_Vertex = defines_Gouraud;
-    case LightingModel::Unlit:
-    case LightingModel::Lambert:
-    case LightingModel::BlinnPhong:
+    case ELightingModel::Unlit:
+    case ELightingModel::Lambert:
+    case ELightingModel::BlinnPhong:
         break;
     default:
         defines_Vertex = nullptr;
@@ -80,7 +80,7 @@ bool FShaderManager::CreatePixelShader(
     const FWString& psPath,
     const FString& psEntry,
     ID3D11PixelShader*& outPS,
-    LightingModel lightingModel)
+    ELightingModel lightingModel)
 {
     DWORD shaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
     shaderFlags |= D3DCOMPILE_DEBUG;
@@ -127,16 +127,16 @@ bool FShaderManager::CreatePixelShader(
 
     switch (lightingModel)
     {
-    case LightingModel::Unlit:
+    case ELightingModel::Unlit:
         defines_Pixel = defines_Unlit;
         break;
-    case LightingModel::Gouraud:
+    case ELightingModel::Gouraud:
         defines_Pixel = defines_Gouraud;
         break;
-    case LightingModel::Lambert:
+    case ELightingModel::Lambert:
         defines_Pixel = defines_Lambert;
         break;
-    case LightingModel::BlinnPhong:
+    case ELightingModel::BlinnPhong:
         defines_Pixel = defines_BlinnPhong;
         break;
     default:

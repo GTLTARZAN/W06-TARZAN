@@ -474,6 +474,40 @@ void ControlEditorPanel::CreateFlagButton() const
     }
 
     ImGui::SameLine();
+
+    const char* ShadeModeNames[] = { "Gouraud", "Lambert", "Blinn-Phong" };
+    if (ActiveViewport->GetViewMode() == EViewModeIndex::VMI_Lit)
+    {
+        // Lit을 선택했을 때만 Shade를 선택할 수 있도록
+        FString SelectShaderControl = ShadeModeNames[(int)ActiveViewport->GetLighitingModel() - 1];
+        ImVec2 ShaderTextSize = ImGui::CalcTextSize(GetData(SelectShaderControl));
+
+        if (ImGui::Button(GetData(SelectShaderControl), ImVec2(30 + ShaderTextSize.x, 32))) 
+        {
+            ImGui::OpenPopup("ShaderControl");
+        }
+
+        if (ImGui::BeginPopup("ShaderControl"))
+        {
+            for (int i = 0; i < IM_ARRAYSIZE(ShadeModeNames); i++)
+            {
+                bool bIsSelected = ((int)ActiveViewport->GetLighitingModel() - 1 == i);
+                if (ImGui::Selectable(ShadeModeNames[i], bIsSelected))
+                {
+                    ActiveViewport->SetLightingModel((ELightingModel)(i + 1));
+                }
+
+                if (bIsSelected) 
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+
+            ImGui::EndPopup();
+        }
+
+        ImGui::SameLine();
+    }
     
     if (ImGui::Button("Show", ImVec2(60, 32)))
     {

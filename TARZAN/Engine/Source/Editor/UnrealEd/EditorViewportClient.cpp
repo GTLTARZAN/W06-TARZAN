@@ -377,6 +377,15 @@ void FEditorViewportClient::UpdateOrthoCameraLoc()
     }
 }
 
+void FEditorViewportClient::SetViewMode(EViewModeIndex newMode)
+{
+    ViewMode = newMode;
+    if (ViewMode != EViewModeIndex::VMI_Lit) 
+    {
+        LightingModel = ELightingModel::Unlit;
+    }
+}
+
 void FEditorViewportClient::SetOthoSize(float _Value)
 {
     orthoSize += _Value;
