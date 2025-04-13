@@ -8,10 +8,10 @@ void FGraphicsDevice::Initialize(HWND hWindow) {
     CreateFrameBuffer();
 #if USE_GBUFFER
     CreateGBuffer();
+    CreateLightPassBuffer();
 #else
     CreateUber();
 #endif
-    CreateLightPassBuffer();
     CreateDepthStencilBuffer(hWindow);
     CreateDepthStencilState();
     CreateRasterizerState();
@@ -487,21 +487,22 @@ void FGraphicsDevice::Release()
 
 #if USE_GBUFFER
     ReleaseGBuffer();
+    ReleaseLightPassBuffer();
 #else
     ReleaseUber();
 #endif
     ReleaseFrameBuffer();
-    ReleaseLightPassBuffer();
     ReleaseDepthStencilResources();
     ReleaseDeviceAndSwapChain();
     ReleaseBlendState();
 }
 
-void FGraphicsDevice::SwapBuffer() {
+void FGraphicsDevice::SwapBuffer() const
+{
     SwapChain->Present(1, 0);
 }
 
-void FGraphicsDevice::Prepare()
+void FGraphicsDevice::Prepare() const
 {
     DeviceContext->ClearRenderTargetView(FrameBufferRTV, ClearColor); // 렌더 타겟 뷰에 저장된 이전 프레임 데이터를 삭제
     DeviceContext->ClearRenderTargetView(UUIDFrameBufferRTV, ClearColor); 
@@ -511,13 +512,13 @@ void FGraphicsDevice::Prepare()
     DeviceContext->ClearRenderTargetView(GBufferRTV_Albedo, ClearColor); 
     DeviceContext->ClearRenderTargetView(GBufferRTV_Ambient, ClearColor); 
     DeviceContext->ClearRenderTargetView(GBufferRTV_Position, ClearColor);
+
+    DeviceContext->ClearRenderTargetView(LightPassRTV_Color, ClearColor);
+    DeviceContext->ClearRenderTargetView(LightPassRTV_Position, ClearColor);
 #else
     DeviceContext->ClearRenderTargetView(UberRTV_Color, ClearColor);
     DeviceContext->ClearRenderTargetView(UberRTV_Position, ClearColor);
 #endif
-
-    DeviceContext->ClearRenderTargetView(LightPassRTV_Color, ClearColor);
-    DeviceContext->ClearRenderTargetView(LightPassRTV_Position, ClearColor);
 
     DeviceContext->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0); // 깊이 버퍼 초기화 추가
 
@@ -593,7 +594,7 @@ void FGraphicsDevice::ChangeRasterizer(EViewModeIndex evi)
     DeviceContext->RSSetState(CurrentRasterizer); //레스터 라이저 상태 설정
 }
 
-void FGraphicsDevice::ChangeDepthStencilState(ID3D11DepthStencilState* newDetptStencil)
+void FGraphicsDevice::ChangeDepthStencilState(ID3D11DepthStencilState* newDetptStencil) const
 {
     DeviceContext->OMSetDepthStencilState(newDetptStencil, 0);
 }

@@ -4,25 +4,25 @@
 
 #include "Engine/World.h"
 #include "Actors/Player.h"
-#include "BaseGizmos/GizmoBaseComponent.h"
-#include "Components/Light/LightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/UBillboardComponent.h"
 #include "Components/UParticleSubUVComp.h"
+#include "Components/Light/LightComponent.h"
+#include "Components/Light/SpotLightComponent.h"
+#include "Components/FireballComp.h"
+#include "Components/UHeightFogComponent.h"
+#include "Components/SkySphereComponent.h"
+#include "BaseGizmos/GizmoBaseComponent.h"
 #include "Components/UText.h"
 #include "Components/Material/Material.h"
-#include "D3D11RHI/GraphicDevice.h"
 #include "Launch/EditorEngine.h"
 #include "Math/JungleMath.h"
-#include "UnrealEd/EditorViewportClient.h"
 #include "UnrealEd/PrimitiveBatch.h"
 #include "UObject/Casts.h"
 #include "UObject/Object.h"
 #include "PropertyEditor/ShowFlags.h"
 #include "UObject/UObjectIterator.h"
-#include "Components/SkySphereComponent.h"
-#include "Components/FireballComp.h"
-#include "Components/Light/SpotLightComponent.h"
+#include "D3D11RHI/GraphicDevice.h"
 #include "Renderer/Pass/GBufferPass.h"
 #include "Renderer/Pass/LightingPass.h"
 #include "Renderer/Pass/PostProcessPass.h"
@@ -30,18 +30,16 @@
 #include "Editor/LevelEditor/SLevelEditor.h"
 #include "Runtime/Launch/ImGuiManager.h"
 #include "UnrealEd/UnrealEd.h"
-#include "Components/UHeightFogComponent.h"
-#include "Components/Light/LightComponent.h"
-#include "Components/Light/SpotLightComponent.h"
+#include "UnrealEd/EditorViewportClient.h"
 
 extern UEditorEngine* GEngine;
 
 #pragma region Base
 FRenderer::~FRenderer() {}
 
-void FRenderer::Initialize(FGraphicsDevice* graphics)
+void FRenderer::Initialize(FGraphicsDevice* InGraphics)
 {
-    Graphics = graphics;
+    Graphics = InGraphics;
     RenderResourceManager.Initialize(Graphics->Device);
     ShaderManager.Initialize(Graphics->Device, Graphics->DeviceContext);
     ConstantBufferUpdater.Initialize(Graphics->DeviceContext);
@@ -60,7 +58,7 @@ void FRenderer::Render()
     //DeprecatedRender();
 
     SLevelEditor* LevelEditor = GEngine->GetLevelEditor();
-    std::shared_ptr<FEditorViewportClient> CurrentViewport = LevelEditor->GetActiveViewportClient();
+    const std::shared_ptr<FEditorViewportClient> CurrentViewport = LevelEditor->GetActiveViewportClient();
     World = GEngine->GetWorld();
 
     Graphics->Prepare();

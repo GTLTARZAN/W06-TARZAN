@@ -207,15 +207,17 @@ PS_OUT Uber_PS(VS_OUT Input)
 #if LIGHTING_MODEL_GOURAUD
     finalPixel = Input.Color;
 #elif LIGHTING_MODEL_LAMBERT
-    float3 viewDir = normalize(-Input.WorldPos);
+    float3 viewDir = normalize(Input.WorldPos - CameraWorldPos);
+    // AmbientLight
     float4 finalColor = CalculateAmbientLight(Ambient);
+    // DirectionalLight
     finalColor += CalculateDirectionalLight(Directional, Input.Normal, viewDir);
-    
+    // PointLights
     for (int i = 0; i < NUM_POINT_LIGHT; i++)
     {
         finalColor += CalculatePointLight(PointLights[i], Input.WorldPos, Input.Normal, viewDir);
     }
-    
+    // SpotLights
     for (int j = 0; j < NUM_SPOT_LIGHT; j++)
     {
         finalColor += CalculateSpotLight(SpotLights[j], Input.WorldPos, Input.Normal, viewDir);
