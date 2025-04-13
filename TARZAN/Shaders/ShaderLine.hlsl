@@ -250,12 +250,26 @@ float3 ComputeCirclePosition(uint globalInstanceID, uint vertexID)
 {
     int N = g_Circles[0].CircleSegmentCount;
     
-    uint circleIndex = globalInstanceID / N;
-    uint lineIndex = globalInstanceID % N;
+    uint circleIndex = globalInstanceID / (3 * N);
+    uint lineIndex = globalInstanceID % (3 * N);
+    
+    uint axisIndex = (globalInstanceID % (3 * N)) / N;
     
     FCircleData circle = g_Circles[circleIndex];
     
-    float3 axis = normalize(circle.CircleApex - circle.CircleBaseCenter);
+    float3 axis;
+    if (axisIndex == 0)
+    {
+        axis = float3(1, 0, 0);
+    }
+    else if (axisIndex == 1)
+    {
+        axis = float3(0, 1, 0);
+    }
+    else
+    {
+        axis = float3(0, 0, 1);
+    }
     
     float3 arbitrary = abs(dot(axis, float3(0, 0, 1))) < 0.99 ? float3(0, 0, 1) : float3(0, 1, 0);
     float3 u = normalize(cross(axis, arbitrary));
@@ -361,7 +375,7 @@ PS_INPUT mainVS(VS_INPUT input)
     {
         uint circleInstanceID = input.instanceID - circleInstanceStart;
         pos = ComputeCirclePosition(circleInstanceID, input.vertexID);
-        uint circleIndex = circleInstanceID / g_Circles[0].CircleSegmentCount;
+        uint circleIndex = circleInstanceID / (3 * g_Circles[0].CircleSegmentCount);
         
         color = g_Circles[circleIndex].Color;
     }
