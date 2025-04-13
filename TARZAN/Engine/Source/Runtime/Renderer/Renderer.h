@@ -46,14 +46,37 @@ public:
     ID3D11VertexShader* FullScreenVS = nullptr;
     ID3D11InputLayout* FullScreenInputLayout = nullptr;
     
-    // Uber Shader
-    ID3D11VertexShader* UberVS = nullptr;
-    ID3D11PixelShader* UberPS = nullptr;
+#pragma region UberShader
+    // Shading Model
+    LightingModel currentLightingModel = LightingModel::Lambert;
+
+    // Uber Input Layout
     ID3D11InputLayout* UberInputLayout = nullptr;
 
-    ID3D11VertexShader* UberUnlitVS = nullptr;
-    ID3D11PixelShader* UberUnlitPS = nullptr;
-    ID3D11InputLayout* UberUnlitInputLayout = nullptr;
+    // Normal VertexShader (Not Use Gouraud Shading)
+    // Used by Unlit, Lambert, Blinn-Phong
+    ID3D11VertexShader* NormalVS = nullptr;
+
+    // Gouraud VertexShader
+    // Used by Gouraud
+    ID3D11VertexShader* GouraudVS = nullptr;
+
+    // Gouruad PixelShader
+    // Unlit과 내부 코드가 달라서 PixelShader 분리
+    ID3D11PixelShader* GouraudPS = nullptr;
+
+    // Lambert PixelShader
+    // Used by Lambert
+    ID3D11PixelShader* LambertPS = nullptr;
+
+    // BlinnPhong PixelShader
+    // Used by BlinnPhong
+    ID3D11PixelShader* BlinnPhongPS = nullptr;
+
+    // Unlit PixelShader
+    ID3D11PixelShader* UnlitPS = nullptr;
+
+#pragma endregion
 
     // GBuffer Shader
     ID3D11VertexShader* GBufferVS = nullptr;
@@ -120,7 +143,6 @@ public:
     // Shader
     void CreateShader();
     void PrepareUberShader() const;
-    void PrepareUberUnlitShader() const;
     void PrepareShader() const;
     void PrepareLightShader() const;
     void PreparePostProcessShader() const;

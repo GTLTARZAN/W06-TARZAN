@@ -4,6 +4,15 @@
 #include <string>
 #include <Container/String.h>
 
+enum class LightingModel 
+{
+    None,
+    Gouraud,
+    Lambert,
+    BlinnPhong,
+    Unlit,
+};
+
 class FShaderManager
 {
 public:
@@ -18,12 +27,14 @@ public:
         UINT numElements,
         ID3D11InputLayout** outInputLayout = nullptr,
         UINT* outStride = nullptr,
-        UINT vertexSize = 0);
+        UINT vertexSize = 0,
+        LightingModel lightingModel = LightingModel::None);
 
     bool CreatePixelShader(
         const FWString& psPath,
         const FString& psEntry,
-        ID3D11PixelShader*& outPS);
+        ID3D11PixelShader*& outPS,
+        LightingModel lightingModel = LightingModel::None);
 
     void ReleaseShader(ID3D11InputLayout* layout, ID3D11VertexShader* vs, ID3D11PixelShader* ps);
 

@@ -20,14 +20,45 @@ bool FShaderManager::CreateVertexShader(
     UINT numElements,
     ID3D11InputLayout** outInputLayout,
     UINT* outStride,
-    UINT vertexSize)
+    UINT vertexSize,
+    LightingModel lightingModel)
 {
     DWORD shaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
     shaderFlags |= D3DCOMPILE_DEBUG;
     shaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
 
+    // Vertex Shader Macro
+    D3D_SHADER_MACRO defines_Normal[] = 
+    {
+        { "NORMAL_VERTEX", "1" },
+        { "LIGHTING_MODEL_GOURAUD", "0" },
+        { nullptr, nullptr } // 반드시 마지막은 null로 종료
+    };
+
+    D3D_SHADER_MACRO defines_Gouraud[] =
+    {
+        { "NORMAL_VERTEX", "0" },
+        { "LIGHTING_MODEL_GOURAUD", "1" },
+        { nullptr, nullptr } // 반드시 마지막은 null로 종료
+    };
+
+    D3D_SHADER_MACRO* defines_Vertex = nullptr;
+
+    switch (lightingModel)
+    {
+    case LightingModel::Gouraud:
+        defines_Vertex = defines_Gouraud;
+    case LightingModel::Unlit:
+    case LightingModel::Lambert:
+    case LightingModel::BlinnPhong:
+        break;
+    default:
+        defines_Vertex = nullptr;
+        break;
+    }
+
     ID3DBlob* vsBlob = nullptr;
-    HRESULT hr = D3DCompileFromFile(vsPath.c_str(), nullptr, nullptr, *vsEntry, "vs_5_0", shaderFlags, 0, &vsBlob, nullptr);
+    HRESULT hr = D3DCompileFromFile(vsPath.c_str(), defines_Vertex, nullptr, *vsEntry, "vs_5_0", shaderFlags, 0, &vsBlob, nullptr);
     if (FAILED(hr)) return false;
 
      hr = Device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &outVS);
@@ -48,14 +79,73 @@ bool FShaderManager::CreateVertexShader(
 bool FShaderManager::CreatePixelShader(
     const FWString& psPath,
     const FString& psEntry,
-    ID3D11PixelShader*& outPS)
+    ID3D11PixelShader*& outPS,
+    LightingModel lightingModel)
 {
     DWORD shaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
     shaderFlags |= D3DCOMPILE_DEBUG;
     shaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
 
+    // Pixel Shader Macro
+    D3D_SHADER_MACRO defines_Unlit[] =
+    {
+        { "UNLIT", "1" },
+        { "LIGHTING_MODEL_GOURAUD", "0" },
+        { "LIGHTING_MODEL_LAMBERT", "0" },
+        { "LIGHTING_MODEL_PHONG", "0" },
+        { nullptr, nullptr } // 반드시 마지막은 null로 종료
+    };
+
+    D3D_SHADER_MACRO defines_Gouraud[] =
+    {
+        { "UNLIT", "0" },
+        { "LIGHTING_MODEL_GOURAUD", "1" },
+        { "LIGHTING_MODEL_LAMBERT", "0" },
+        { "LIGHTING_MODEL_PHONG", "0" },
+        { nullptr, nullptr } // 반드시 마지막은 null로 종료
+    };
+
+    D3D_SHADER_MACRO defines_Lambert[] =
+    {
+        { "UNLIT", "0" },
+        { "LIGHTING_MODEL_GOURAUD", "0" },
+        { "LIGHTING_MODEL_LAMBERT", "1" },
+        { "LIGHTING_MODEL_PHONG", "0" },
+        { nullptr, nullptr } // 반드시 마지막은 null로 종료
+    };
+
+    D3D_SHADER_MACRO defines_BlinnPhong[] =
+    {
+        { "UNLIT", "0" },
+        { "LIGHTING_MODEL_GOURAUD", "0" },
+        { "LIGHTING_MODEL_LAMBERT", "0" },
+        { "LIGHTING_MODEL_PHONG", "1" },
+        { nullptr, nullptr } // 반드시 마지막은 null로 종료
+    };
+
+    D3D_SHADER_MACRO* defines_Pixel = nullptr;
+
+    switch (lightingModel)
+    {
+    case LightingModel::Unlit:
+        defines_Pixel = defines_Unlit;
+        break;
+    case LightingModel::Gouraud:
+        defines_Pixel = defines_Gouraud;
+        break;
+    case LightingModel::Lambert:
+        defines_Pixel = defines_Lambert;
+        break;
+    case LightingModel::BlinnPhong:
+        defines_Pixel = defines_BlinnPhong;
+        break;
+    default:
+        defines_Pixel = nullptr;
+        break;
+    }
+
     ID3DBlob* psBlob = nullptr;
-    HRESULT hr = D3DCompileFromFile(psPath.c_str(), nullptr, nullptr, *psEntry, "ps_5_0", shaderFlags, 0, &psBlob, nullptr);
+    HRESULT hr = D3DCompileFromFile(psPath.c_str(), defines_Pixel, nullptr, *psEntry, "ps_5_0", shaderFlags, 0, &psBlob, nullptr);
 
     hr = Device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &outPS);
     psBlob->Release();
@@ -64,17 +154,17 @@ bool FShaderManager::CreatePixelShader(
 
 void FShaderManager::ReleaseShader(ID3D11InputLayout* layout, ID3D11VertexShader* vs, ID3D11PixelShader* ps)
 {
-    if (layout)
+    if (layout != nullptr)
     {
         layout->Release();
         layout = nullptr;
     }
-    if (vs)
+    if (vs != nullptr)
     {
         vs->Release();
         vs = nullptr;
     }
-    if (ps)
+    if (ps != nullptr)
     {
         ps->Release();
         ps = nullptr;

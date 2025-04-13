@@ -161,22 +161,26 @@ void FRenderer::CreateShader()
         {"MATERIAL_INDEX", 0, DXGI_FORMAT_R32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
     };
 
+    // Create NormalVertxShader
     ShaderManager.CreateVertexShader(L"Shaders/Uber.hlsl", "Uber_VS",
-        UberVS, UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout, &Stride, sizeof(FVertexSimple));
+        NormalVS, UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout, &Stride, sizeof(FVertexSimple), LightingModel::Lambert);
     
-    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", UberPS);
+    // Create GouraudVertexShader
+    ShaderManager.CreateVertexShader(L"Shaders/Uber.hlsl", "Uber_VS",
+        GouraudVS, UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout, &Stride, sizeof(FVertexSimple), LightingModel::Gouraud);
 
-    D3D11_INPUT_ELEMENT_DESC UberUnlitLayout[] = 
-    {
-        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-    };
+    // Create UnlitPixelShader
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", UnlitPS, LightingModel::Unlit);
 
-    ShaderManager.CreateVertexShader(L"Shaders/UberUnlit.hlsl", "UberUnlit_VS",
-        UberUnlitVS, UberUnlitLayout, ARRAYSIZE(UberUnlitLayout), &UberUnlitInputLayout, &Stride2, sizeof(FVertexUnlit));
+    // Create GouraudPixelShader
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", GouraudPS, LightingModel::Gouraud);
 
-    ShaderManager.CreatePixelShader(L"Shaders/UberUnlit.hlsl", "UberUnlit_PS", UberUnlitPS);
+    // Create LambertPixelShader
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", LambertPS, LightingModel::Lambert);
+
+    // Create BlinnPhongPixelShader
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", BlinnPhongPS, LightingModel::BlinnPhong);
+
 #endif
 
     ShaderManager.CreatePixelShader(L"Shaders/GizmoPixelShader.hlsl", "main", GizmoPixelShader);
@@ -208,7 +212,16 @@ void FRenderer::CreateShader()
 
 void FRenderer::ReleaseShader()
 {
-    ShaderManager.ReleaseShader(UberInputLayout, UberVS, UberPS);
+    UberInputLayout->Release();
+    GouraudVS->Release();
+    GouraudPS->Release();
+    NormalVS->Release();
+    LambertPS->Release();
+    BlinnPhongPS->Release();
+    UnlitPS->Release();
+
+    // 위 변수들의 Release에 ReleaseShader 함수를 쓰는 경우 
+    // 중복 Release로 Crash 터짐, 중복 Release가 안 막아진다.
     ShaderManager.ReleaseShader(InputLayout, VertexShader, PixelShader);
     ShaderManager.ReleaseShader(TextureInputLayout, VertexTextureShader, PixelTextureShader);
     ShaderManager.ReleaseShader(nullptr, VertexLineShader, PixelLineShader);
@@ -216,10 +229,31 @@ void FRenderer::ReleaseShader()
 
 void FRenderer::PrepareUberShader() const
 {
-    Graphics->DeviceContext->VSSetShader(UberVS, nullptr, 0);
-    Graphics->DeviceContext->PSSetShader(UberPS, nullptr, 0);
     Graphics->DeviceContext->IASetInputLayout(UberInputLayout);
 
+    switch (currentLightingModel)
+    {
+    case LightingModel::None:
+        UE_LOG(LogLevel::Display, "No LightingModel");
+        break;
+    case LightingModel::Gouraud:
+        Graphics->DeviceContext->VSSetShader(GouraudVS, nullptr, 0);
+        Graphics->DeviceContext->PSSetShader(GouraudPS, nullptr, 0);
+        break;
+    case LightingModel::Lambert:
+        Graphics->DeviceContext->VSSetShader(NormalVS, nullptr, 0);
+        Graphics->DeviceContext->PSSetShader(LambertPS, nullptr, 0);
+        break;
+    case LightingModel::BlinnPhong:
+        Graphics->DeviceContext->VSSetShader(NormalVS, nullptr, 0);
+        Graphics->DeviceContext->PSSetShader(BlinnPhongPS, nullptr, 0);
+        break;
+    case LightingModel::Unlit:
+        Graphics->DeviceContext->VSSetShader(NormalVS, nullptr, 0);
+        Graphics->DeviceContext->PSSetShader(UnlitPS, nullptr, 0);
+        break;
+    }
+    
     if (ObjectMatrixConstantBuffer)
     {
         Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ObjectMatrixConstantBuffer);
@@ -229,18 +263,6 @@ void FRenderer::PrepareUberShader() const
 
         Graphics->DeviceContext->PSSetConstantBuffers(2, 1, &LightConstantBuffer);
         Graphics->DeviceContext->PSSetConstantBuffers(3, 1, &MaterialConstantBuffer);
-    }
-}
-
-void FRenderer::PrepareUberUnlitShader() const
-{
-    Graphics->DeviceContext->VSSetShader(UberUnlitVS, nullptr, 0);
-    Graphics->DeviceContext->PSSetShader(UberUnlitPS, nullptr, 0);
-    Graphics->DeviceContext->IASetInputLayout(UberUnlitInputLayout);
-
-    if (ObjectMatrixConstantBuffer)
-    {
-        Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ObjectMatrixConstantBuffer);
     }
 }
 
@@ -312,7 +334,7 @@ void FRenderer::PrepareGizmoShader() const
 #if USE_GBUFFER
     Graphics->DeviceContext->VSSetShader(GBufferVS, nullptr, 0);
 #else
-    Graphics->DeviceContext->VSSetShader(UberUnlitVS, nullptr, 0);
+    Graphics->DeviceContext->VSSetShader(NormalVS, nullptr, 0);
 #endif
     Graphics->DeviceContext->PSSetShader(GizmoPixelShader, nullptr, 0);
 
