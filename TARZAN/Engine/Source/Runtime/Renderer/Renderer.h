@@ -51,6 +51,10 @@ public:
     ID3D11PixelShader* UberPS = nullptr;
     ID3D11InputLayout* UberInputLayout = nullptr;
 
+    ID3D11VertexShader* UberUnlitVS = nullptr;
+    ID3D11PixelShader* UberUnlitPS = nullptr;
+    ID3D11InputLayout* UberUnlitInputLayout = nullptr;
+
     // GBuffer Shader
     ID3D11VertexShader* GBufferVS = nullptr;
     ID3D11PixelShader* GBufferPS = nullptr;
@@ -116,6 +120,7 @@ public:
     // Shader
     void CreateShader();
     void PrepareUberShader() const;
+    void PrepareUberUnlitShader() const;
     void PrepareShader() const;
     void PrepareLightShader() const;
     void PreparePostProcessShader() const;
