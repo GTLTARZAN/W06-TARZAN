@@ -28,6 +28,7 @@ struct FVertexSimple
 {
     float x, y, z;    // Position
     float r, g, b, a; // Color
+    float tx, ty, tz; // Tangent
     float nx, ny, nz;
     float u=0, v=0;
     uint32 MaterialIndex;

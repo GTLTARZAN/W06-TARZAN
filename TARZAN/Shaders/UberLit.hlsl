@@ -152,6 +152,7 @@ struct VS_IN
 {
     float3 Position : POSITION;
     float4 Color : COLOR;
+    float3 Tangent : TANGENT;
     float3 Normal : NORMAL;
     float2 TexCoord : TEXCOORD;
     float MaterialIndex : MATERIAL_INDEX;
