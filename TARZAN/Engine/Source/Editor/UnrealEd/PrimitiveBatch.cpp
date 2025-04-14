@@ -150,7 +150,7 @@ void UPrimitiveBatch::UpdateCircleResources()
         ReleaseCircleResources();
 
         pCircleBuffer = UEditorEngine::renderer.GetResourceManager().CreateStructuredBuffer<FCircle>(static_cast<UINT>(allocatedCircleCapacity));
-        pCircleSRV = UEditorEngine::renderer.CreateCircleSRV(pCircleBuffer, static_cast<UINT>(allocatedConeCapacity));
+        pCircleSRV = UEditorEngine::renderer.CreateCircleSRV(pCircleBuffer, static_cast<UINT>(allocatedCircleCapacity));
     }
 
     if (pCircleBuffer && pCircleSRV) 
