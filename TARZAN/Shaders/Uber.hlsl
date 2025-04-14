@@ -271,11 +271,11 @@ PS_OUT Uber_PS(VS_OUT Input)
 float4 CalculateDirectionalLightBlinnPhong(FDirectionalLightInfo info, float3 normal, float3 viewDir)
 {
     // Diffuse
-    float diff = max(dot(normal, info.Direction.xyz), 0.0f);
+    float diff = max(dot(normal, -info.Direction.xyz), 0.0f);
     
     // Specular
     
-    float3 halfDir = normalize(info.Direction.xyz + viewDir);
+    float3 halfDir = normalize(-info.Direction.xyz + viewDir);
     
     // TODO: 32 값은 Roughness 값으로 변수화 필요
     float spec = pow(max(dot(normal, halfDir), 0.0f), 32);
