@@ -428,6 +428,59 @@ struct FLoaderOBJ
             
         }
 
+        TArray<FVector> tangentSums;
+        tangentSums.SetNum(OutStaticMesh.Vertices.Num());
+        for (int i = 0; i < OutStaticMesh.Vertices.Num(); i++)
+        {
+            tangentSums[i] = FVector(0, 0, 0);
+        }
+
+        for (int i = 0; i < RawData.VertexIndices.Num(); i += 3)
+        {
+            uint32 i0 = OutStaticMesh.Indices[i + 0];
+            uint32 i1 = OutStaticMesh.Indices[i + 1];
+            uint32 i2 = OutStaticMesh.Indices[i + 2];
+
+            FVertexSimple& v0 = OutStaticMesh.Vertices[i0];
+            FVertexSimple& v1 = OutStaticMesh.Vertices[i1];
+            FVertexSimple& v2 = OutStaticMesh.Vertices[i2];
+
+            FVector p0(v0.x, v0.y, v0.z);
+            FVector p1(v1.x, v1.y, v1.z);
+            FVector p2(v2.x, v2.y, v2.z);
+
+            FVector2D uv0(v0.u, v0.v);
+            FVector2D uv1(v1.u, v1.v);
+            FVector2D uv2(v2.u, v2.v);
+
+            FVector edge1 = p1 - p0;
+            FVector edge2 = p2 - p0;
+            FVector2D deltaUV1 = uv1 - uv0;
+            FVector2D deltaUV2 = uv2 - uv0;
+            
+            float f = deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y;
+            if (f == 0)
+                f = 1e-8f;
+            f = 1.0f / f;
+
+            FVector tangent;
+            tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+            tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+            tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+            tangentSums[i0] = tangentSums[i0] + tangent;
+            tangentSums[i1] = tangentSums[i1] + tangent;
+            tangentSums[i2] = tangentSums[i2] + tangent;
+        }
+
+        for (int32 i = 0; i < OutStaticMesh.Vertices.Num(); i++)
+        {
+            FVector tangent = tangentSums[i].Normalize();
+            OutStaticMesh.Vertices[i].tx = tangent.x;
+            OutStaticMesh.Vertices[i].ty = tangent.y;
+            OutStaticMesh.Vertices[i].tz = tangent.z;
+        }
+
         // Calculate StaticMesh BoundingBox
         ComputeBoundingBox(OutStaticMesh.Vertices, OutStaticMesh.BoundingBoxMin, OutStaticMesh.BoundingBoxMax);
         
@@ -668,6 +721,7 @@ public:
         {
             Serializer::ReadFString(File, Material.MTLName);
             File.read(reinterpret_cast<char*>(&Material.bHasTexture), sizeof(Material.bHasTexture));
+            File.read(reinterpret_cast<char*>(&Material.bHasNormalMap), sizeof(Material.bHasNormalMap));
             File.read(reinterpret_cast<char*>(&Material.bTransparent), sizeof(Material.bTransparent));
             File.read(reinterpret_cast<char*>(&Material.Diffuse), sizeof(Material.Diffuse));
             File.read(reinterpret_cast<char*>(&Material.Specular), sizeof(Material.Specular));

@@ -264,7 +264,7 @@ PS_OUT Uber_PS(VS_OUT Input)
     finalPixel *= DiffuseMap;
     
     float4 NormalMap = g_NormalMap.Sample(g_Sampler, Input.TexCoord);
-    finalPixel = NormalMap;
+    //finalPixel = NormalMap;
     
     Output.Color = finalPixel;
     Output.WorldPos = float4(Input.WorldPos.xyz, 0.5f);
