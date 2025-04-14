@@ -966,7 +966,7 @@ void FRenderer::RenderLight()
     for (auto Light : LightObjs)
     {
         
-        if (Light->IsA<UPointLightComponent>())
+        if (Light->IsA<UPointLightComponent>() && !Light->IsA<USpotLightComponent>())
         {
             // PointLight를 상속 받은 경우에 대해
             UPointLightComponent* PointLight = Cast<UPointLightComponent>(Light);
