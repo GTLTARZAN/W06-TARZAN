@@ -1,5 +1,6 @@
 #include "PrimitiveBatch.h"
 #include "EditorEngine.h"
+#include "Math/MathUtility.h"
 #include "UnrealEd/EditorViewportClient.h"
 extern UEditorEngine* GEngine;
 
@@ -149,7 +150,7 @@ void UPrimitiveBatch::UpdateCircleResources()
         ReleaseCircleResources();
 
         pCircleBuffer = UEditorEngine::renderer.GetResourceManager().CreateStructuredBuffer<FCircle>(static_cast<UINT>(allocatedCircleCapacity));
-        pCircleSRV = UEditorEngine::renderer.CreateCircleSRV(pCircleBuffer, static_cast<UINT>(allocatedConeCapacity));
+        pCircleSRV = UEditorEngine::renderer.CreateCircleSRV(pCircleBuffer, static_cast<UINT>(allocatedCircleCapacity));
     }
 
     if (pCircleBuffer && pCircleSRV) 
@@ -224,19 +225,23 @@ void UPrimitiveBatch::RenderOBB(const FBoundingBox& localAABB, const FVector& ce
 
 }
 
-void UPrimitiveBatch::AddCone(const FVector& center, float radius, float height, int segments, const FLinearColor& color, const FMatrix& modelMatrix)
+void UPrimitiveBatch::AddCone(const FVector& Center, const float Radius, float Angle, const FLinearColor& Color, const FMatrix& ModelMatrix)
 {
-    ConeSegmentCount = segments;
-    FVector localApex = FVector(0, 0, 0);
-    FCone cone;
-    cone.ConeApex = center + FMatrix::TransformVector(localApex, modelMatrix);
-    FVector localBaseCenter = FVector(height, 0, 0);
-    cone.ConeBaseCenter = center + FMatrix::TransformVector(localBaseCenter, modelMatrix);
-    cone.ConeRadius = radius;
-    cone.ConeHeight = height;
-    cone.Color = color;
-    cone.ConeSegmentCount = ConeSegmentCount;
-    Cones.Add(cone);
+    FCone Cone;
+
+    const auto LocalApex = FVector(0, 0, 0);
+    float Height = Radius * cos(FMath::DegreesToRadians(Angle)); // Height of the cone
+    const auto LocalBaseCenter = FVector(Height, 0, 0);    // Light's Radius
+    ConeSegmentCount = 24;//segments;
+
+    Cone.ConeApex = Center + FMatrix::TransformVector(LocalApex, ModelMatrix);
+    Cone.ConeBaseCenter = Center + FMatrix::TransformVector(LocalBaseCenter, ModelMatrix);
+    Cone.ConeRadius = tan(FMath::DegreesToRadians(Angle)) * Height;
+    Cone.ConeHeight = Height;
+    Cone.Color = Color;
+    Cone.ConeSegmentCount = ConeSegmentCount;
+
+    Cones.Add(Cone);
 }
 
 void UPrimitiveBatch::AddCircle(const FVector& center, float radius, int segments, const FLinearColor& color, const FMatrix& modelMatrix)

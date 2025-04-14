@@ -1,4 +1,3 @@
-
 cbuffer MatrixBuffer : register(b0)
 {
     row_major float4x4 MVP;
@@ -208,10 +207,10 @@ float3 ComputeBoundingBoxPosition(uint bbInstanceID, uint edgeIndex, uint vertex
 float3 ComputeConePosition(uint globalInstanceID, uint vertexID)
 {
     // 모든 cone이 동일한 세그먼트 수를 가짐
-    int N = g_ConeData[0].ConeSegmentCount;
+    int N = 24;//g_ConeData[0].ConeSegmentCount;
     
-    uint coneIndex = globalInstanceID / (2 * N);
-    uint lineIndex = globalInstanceID % (2 * N);
+    uint coneIndex = globalInstanceID / (2 * N + 10);
+    uint lineIndex = globalInstanceID % (2 * N + 10);
     
     // cone 데이터 읽기
     FConeData cone = g_ConeData[coneIndex];
@@ -231,7 +230,7 @@ float3 ComputeConePosition(uint globalInstanceID, uint vertexID)
         float3 baseVertex = cone.ConeBaseCenter + (cos(angle) * u + sin(angle) * v) * cone.ConeRadius;
         return (vertexID == 0) ? cone.ConeApex : baseVertex;
     }
-    else
+    else if (lineIndex < (uint) 2 * N)
     {
         // 밑면 둘레 선분: 밑면상의 인접한 두 점을 잇는다.
         uint idx = lineIndex - N;
@@ -240,6 +239,55 @@ float3 ComputeConePosition(uint globalInstanceID, uint vertexID)
         float3 v0 = cone.ConeBaseCenter + (cos(angle0) * u + sin(angle0) * v) * cone.ConeRadius;
         float3 v1 = cone.ConeBaseCenter + (cos(angle1) * u + sin(angle1) * v) * cone.ConeRadius;
         return (vertexID == 0) ? v0 : v1;
+    }
+    else
+    {
+        uint idx = lineIndex - 2 * N;
+
+        float radius = sqrt(cone.ConeRadius * cone.ConeRadius + cone.ConeHeight * cone.ConeHeight);
+        
+        // Cone의 각도 계산 (라디안)
+        float coneAngle = atan2(cone.ConeRadius, cone.ConeHeight);
+        
+        // Forward 벡터 (Cone의 방향)
+        float3 forward = normalize(cone.ConeApex - cone.ConeBaseCenter);
+        
+        // 임시 Up 벡터 (일반적으로 (0,1,0)을 사용)
+        float3 tempUp = float3(0, 1, 0);
+        
+        // Forward와 Up이 거의 평행한 경우를 대비해 다른 Up 벡터 사용
+        if (abs(dot(forward, tempUp)) > 0.99)
+        {
+            tempUp = float3(0, 0, 1);
+        }
+        
+        // Right 벡터 계산 (Forward와 Up의 외적)
+        float3 right = normalize(cross(forward, tempUp));
+        
+        // 최종 Up 벡터 계산 (Right와 Forward의 외적)
+        float3 up = normalize(cross(right, forward));
+
+        // Local Y축을 중심으로 하는 원 (Right와 Up 벡터 사용)
+        if (idx < 5)
+        {
+            float angle0 = coneAngle - (idx * 2.0f * coneAngle / 5.0f) + 3.14159265359f;
+            float angle1 = coneAngle - ((idx + 1) * 2.0f * coneAngle / 5.0f) + 3.14159265359f;
+            
+            float3 v0 = cone.ConeApex + (cos(angle0) * forward + sin(angle0) * up) * radius;
+            float3 v1 = cone.ConeApex + (cos(angle1) * forward + sin(angle1) * up) * radius;
+            return (vertexID == 0) ? v0 : v1;
+        }
+        // Local Z축을 중심으로 하는 원 (Forward와 Right 벡터 사용)
+        else
+        {
+            idx -= 5;
+            float angle0 = coneAngle - (idx * 2.0f * coneAngle / 5.0f) + 3.14159265359f;
+            float angle1 = coneAngle - ((idx + 1) * 2.0f * coneAngle / 5.0f) + 3.14159265359f;
+            
+            float3 v0 = cone.ConeApex + (cos(angle0) * forward + sin(angle0) * right) * radius;
+            float3 v1 = cone.ConeApex + (cos(angle1) * forward + sin(angle1) * right) * radius;
+            return (vertexID == 0) ? v0 : v1;
+        }
     }
 }
 
@@ -303,10 +351,12 @@ PS_INPUT mainVS(VS_INPUT input)
     PS_INPUT output;
     float3 pos;
     float4 color;
+
+    int ConeSegmentCount = 24;
     
     // Cone 하나당 (2 * SegmentCount) 선분.
     // ConeCount 개수만큼이므로 총 (2 * SegmentCount * ConeCount).
-    uint coneInstCnt = ConeCount * 2 * g_ConeData[0].ConeSegmentCount;
+    uint coneInstCnt = ConeCount * (2 * ConeSegmentCount + 10);
     uint obbInstCnt = OBBCount * 12;
 
     // Grid / Axis / AABB 인스턴스 개수 계산
@@ -357,8 +407,7 @@ PS_INPUT mainVS(VS_INPUT input)
         // 그 다음 콘(Cone) 구간
         uint coneInstanceID = input.instanceID - coneInstanceStart;
         pos = ComputeConePosition(coneInstanceID, input.vertexID);
-        int N = g_ConeData[0].ConeSegmentCount;
-        uint coneIndex = coneInstanceID / (2 * N);
+        uint coneIndex = coneInstanceID / (2 * ConeSegmentCount + 10);
         
         color = g_ConeData[coneIndex].Color;
     }

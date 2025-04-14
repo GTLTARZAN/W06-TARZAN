@@ -1054,7 +1054,7 @@ void FRenderer::RenderLight()
     for (auto Light : LightObjs)
     {
         
-        if (Light->IsA<UPointLightComponent>())
+        if (Light->IsA<UPointLightComponent>() && !Light->IsA<USpotLightComponent>())
         {
             // PointLight를 상속 받은 경우에 대해
             UPointLightComponent* PointLight = Cast<UPointLightComponent>(Light);
@@ -1069,7 +1069,8 @@ void FRenderer::RenderLight()
             {
                 if (GEngine->GetWorld()->WorldType == EWorldType::PIE) continue;
                 FMatrix Model = JungleMath::CreateModelMatrix(SpotLight->GetWorldLocation(), SpotLight->GetWorldRotation(), { 1, 1, 1 });
-                UPrimitiveBatch::GetInstance().AddCone(SpotLight->GetWorldLocation(), SpotLight->GetRadius() * tan(SpotLight->GetOuterConeAngle() / 2 * 3.14 / 180.0f), SpotLight->GetRadius(), 140, SpotLight->GetColor(), Model);
+                UPrimitiveBatch::GetInstance().AddCone(SpotLight->GetWorldLocation(), SpotLight->GetRadius(), SpotLight->GetOuterConeAngle(), SpotLight->GetColor(), Model);
+                UPrimitiveBatch::GetInstance().AddCone(SpotLight->GetWorldLocation(), SpotLight->GetRadius(), SpotLight->GetInnerConeAngle(), SpotLight->GetColor() / 2, Model);
                 UPrimitiveBatch::GetInstance().RenderOBB(SpotLight->GetBoundingBox(), Light->GetWorldLocation(), Model);
             }
         }
@@ -1094,7 +1095,7 @@ void FRenderer::RenderBatch(
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
     UINT vertexCountPerInstance = 2;
-    UINT instanceCount = gridParam.numGridLines + 3 + (boundingBoxCount * 12) + (coneCount * (2 * coneSegmentCount)) + (12 * obbCount) + (3 * circleCount * (circleSegmentCount));
+    UINT instanceCount = gridParam.numGridLines + 3 + (boundingBoxCount * 12) + (coneCount * (2 * coneSegmentCount + 10)) + (12 * obbCount) + (3 * circleCount * (circleSegmentCount));
     Graphics->DeviceContext->DrawInstanced(vertexCountPerInstance, instanceCount, 0, 0);
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }

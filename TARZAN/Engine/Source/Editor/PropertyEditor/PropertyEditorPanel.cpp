@@ -287,136 +287,127 @@ void PropertyEditorPanel::Render()
         bFirstFrame = false;
     }
 
-    if (PickedActor && PickedComponent && PickedComponent->IsA<UFireballComponent>())
+    if (PickedActor && PickedComponent && PickedComponent->IsA<USpotLightComponent>())
     {
-        UFireballComponent* fireballObj = Cast<UFireballComponent>(PickedComponent);
+        USpotLightComponent* SpotLightComponent = Cast<USpotLightComponent>(PickedComponent);
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
         if (ImGui::TreeNodeEx("SpotLight Component", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
         {
             FLinearColor currColor;
-            currColor = fireballObj->GetColor();
+            currColor = SpotLightComponent->GetColor();
 
-
-            float r = currColor.R;
-            float g = currColor.G;
-            float b = currColor.B;
-            float a = currColor.A;
-            float h, s, v;
-            float lightColor[4] = { r, g, b, a };
+            float R = currColor.R;
+            float G = currColor.G;
+            float B = currColor.B;
+            float A = currColor.A;
+            float H, S, V;
+            float LightColor[4] = { R, G, B, A };
 
             // SpotLight Color
-            if (ImGui::ColorPicker4("##SpotLight Color", lightColor,
+            if (ImGui::ColorPicker4("##SpotLight Color", LightColor,
                 ImGuiColorEditFlags_DisplayRGB |
                 ImGuiColorEditFlags_NoSidePreview |
                 ImGuiColorEditFlags_NoInputs |
                 ImGuiColorEditFlags_Float))
-
             {
-                r = lightColor[0];
-                g = lightColor[1];
-                b = lightColor[2];
-                a = lightColor[3];
-                fireballObj->SetColor(FLinearColor(r, g, b, a));
-                
-               
-               
+                R = LightColor[0];
+                G = LightColor[1];
+                B = LightColor[2];
+                A = LightColor[3];
+                SpotLightComponent->SetColor(FLinearColor(R, G, B, A));
             }
-            RGBToHSV(r, g, b, h, s, v);
+
+            RGBToHSV(R, G, B, H, S, V);
+
             // RGB/HSV
-            bool changedRGB = false;
-            bool changedHSV = false;
+            bool bChangedRGB = false;
+            bool bChangedHSV = false;
 
             // RGB
             ImGui::PushItemWidth(50.0f);
-            if (ImGui::DragFloat("R##R", &r, 0.001f, 0.f, 1.f)) changedRGB = true;
+            if (ImGui::DragFloat("R##R", &R, 0.001f, 0.f, 1.f)) bChangedRGB = true;
             ImGui::SameLine();
-            if (ImGui::DragFloat("G##G", &g, 0.001f, 0.f, 1.f)) changedRGB = true;
+            if (ImGui::DragFloat("G##G", &G, 0.001f, 0.f, 1.f)) bChangedRGB = true;
             ImGui::SameLine();
-            if (ImGui::DragFloat("B##B", &b, 0.001f, 0.f, 1.f)) changedRGB = true;
+            if (ImGui::DragFloat("B##B", &B, 0.001f, 0.f, 1.f)) bChangedRGB = true;
             ImGui::Spacing();
             
             // HSV
-            if (ImGui::DragFloat("H##H", &h, 0.1f, 0.f, 360)) changedHSV = true;
+            if (ImGui::DragFloat("H##H", &H, 0.1f, 0.f, 360)) bChangedHSV = true;
             ImGui::SameLine();
-            if (ImGui::DragFloat("S##S", &s, 0.001f, 0.f, 1)) changedHSV = true;
+            if (ImGui::DragFloat("S##S", &S, 0.001f, 0.f, 1)) bChangedHSV = true;
             ImGui::SameLine();
-            if (ImGui::DragFloat("V##V", &v, 0.001f, 0.f, 1)) changedHSV = true;
+            if (ImGui::DragFloat("V##V", &V, 0.001f, 0.f, 1)) bChangedHSV = true;
             ImGui::PopItemWidth();
             ImGui::Spacing();
             
-            if (changedRGB && !changedHSV)
+            if (bChangedRGB && !bChangedHSV)
             {
                 // RGB -> HSV
-                RGBToHSV(r, g, b, h, s, v);
-                
-                    fireballObj->SetColor(FLinearColor(r, g, b, a));
-                
-                
+                RGBToHSV(R, G, B, H, S, V);
+
+                SpotLightComponent->SetColor(FLinearColor(R, G, B, A));
             }
-            else if (changedHSV && !changedRGB)
+            else if (bChangedHSV && !bChangedRGB)
             {
                 // HSV -> RGB
-                HSVToRGB(h, s, v, r, g, b);
-                
-                    fireballObj->SetColor(FLinearColor(r, g, b, a));
-                
-               
+                HSVToRGB(H, S, V, R, G, B);
+
+                SpotLightComponent->SetColor(FLinearColor(R, G, B, A));
             }
 
             // Light Radius
             float radiusVal;
-           
-                radiusVal = fireballObj->GetRadius();
-            
+            radiusVal = SpotLightComponent->GetRadius();
             if (ImGui::SliderFloat("Radius", &radiusVal, 1.0f, 1000.0f))
             {
-                
-                
-                    fireballObj->SetRadius(radiusVal);
-               
+                SpotLightComponent->SetRadius(radiusVal);
             }
-            float IntensityVal = fireballObj->GetIntensity();
+
+            float IntensityVal = SpotLightComponent->GetIntensity();
             if (ImGui::SliderFloat("Intensity", &IntensityVal, 1.0f, 100.0f))
             {
-                if (fireballObj)
+                if (SpotLightComponent)
                 {
-                    fireballObj->SetIntensity(IntensityVal);
+                    SpotLightComponent->SetIntensity(IntensityVal);
                 }
             }
-            float RadiusFallOffVal = fireballObj->GetRadiusFallOff();
+
+            float RadiusFallOffVal = SpotLightComponent->GetLightFalloffExponent();
             if (ImGui::SliderFloat("RadiusFallOff", &RadiusFallOffVal, 0.0f, 10.0f))
             {
-                if (fireballObj)
+                if (SpotLightComponent)
                 {
-                    fireballObj->SetRadiusFallOff(RadiusFallOffVal);
+                    SpotLightComponent->SetLightFalloffExponent(RadiusFallOffVal);
                 }
             }
-            if (USpotLightComponent* SpotLight= Cast<USpotLightComponent>(fireballObj))
+
+            float InnerConeAngle = SpotLightComponent->GetInnerConeAngle();
+            float OuterConeAngle = SpotLightComponent->GetOuterConeAngle();
+            float prevInner = InnerConeAngle;
+            float prevOuter = OuterConeAngle;
+
+            if (ImGui::SliderFloat("InnerConeAngle", &InnerConeAngle, 0.0f, 80.0f))
             {
-                float InnerAngle = SpotLight->GetInnerConeAngle();
-                float OuterAngle = SpotLight->GetOuterConeAngle();
-                float prevInner = InnerAngle;
-                float prevOuter = OuterAngle;
-
-                if (ImGui::SliderFloat("InnerAngle", &InnerAngle, 1.0f, 90.0f))
+                if (InnerConeAngle > OuterConeAngle)
                 {
-                    if (InnerAngle > OuterAngle)
-                        OuterAngle = InnerAngle;
-
-                    SpotLight->SetInnerConeAngle(InnerAngle);
-                    SpotLight->SetOuterConeAngle(OuterAngle);
+                    OuterConeAngle = InnerConeAngle;
                 }
 
-                if (ImGui::SliderFloat("OuterAngle", &OuterAngle, 1.0f, 90.0f))
-                {
-                    if (OuterAngle < InnerAngle)
-                        InnerAngle = OuterAngle;
+                SpotLightComponent->SetInnerConeAngle(InnerConeAngle);
+                SpotLightComponent->SetOuterConeAngle(OuterConeAngle);
+            }
 
-                    SpotLight->SetOuterConeAngle(OuterAngle);
-                    SpotLight->SetInnerConeAngle(InnerAngle);
+            if (ImGui::SliderFloat("OuterConeAngle", &OuterConeAngle, 0.0f, 80.0f))
+            {
+                if (OuterConeAngle < InnerConeAngle)
+                {
+                    InnerConeAngle = OuterConeAngle;
                 }
 
-          }
+                SpotLightComponent->SetOuterConeAngle(OuterConeAngle);
+                SpotLightComponent->SetInnerConeAngle(InnerConeAngle);
+            }
             ImGui::TreePop();
         }
         ImGui::PopStyleColor();
