@@ -144,7 +144,7 @@ public:
     //Release
     void Release();
     void ReleaseShader();
-    void ReleaseUberShader();
+    void ReleaseHotReloadShader();
     void ReleaseConstantBuffer();
 
     // Shader
@@ -228,6 +228,7 @@ public:
 
     // Hot Reload
     bool UberIsOutDate();
+    bool LineIsOutDate();
     void HotReloadUberShader();
 private:
     // GBuffer
@@ -242,8 +243,10 @@ private:
     TArray<UGizmoBaseComponent*> GizmoObjs;
 
 public:
-    ID3D11VertexShader* VertexLineShader = nullptr;
-    ID3D11PixelShader* PixelLineShader = nullptr;
+    std::filesystem::file_time_type LastLineWriteTime;
+
+    ID3D11VertexShader* VertexLineShader[2] = { nullptr, nullptr };
+    ID3D11PixelShader* PixelLineShader[2] = { nullptr, nullptr };
     ID3D11Buffer* GridConstantBuffer = nullptr;
     ID3D11Buffer* LinePrimitiveBuffer = nullptr;
     ID3D11ShaderResourceView* pBBSRV = nullptr;

@@ -171,12 +171,14 @@ void FRenderer::CreateShader()
         PixelTextureShader, nullptr);
 
     // Line Shader
+    LastLineWriteTime = std::filesystem::last_write_time("Shaders/ShaderLine.hlsl");
+
     ShaderManager.CreateVertexShader(
         L"Shaders/ShaderLine.hlsl", "mainVS",
-        VertexLineShader, nullptr, 0); // 라인 셰이더는 Layout 안 쓰면 nullptr 전달
+        VertexLineShader[0], VertexLineShader[1], nullptr, 0); // 라인 셰이더는 Layout 안 쓰면 nullptr 전달
     ShaderManager.CreatePixelShader(
         L"Shaders/ShaderLine.hlsl", "mainPS",
-        PixelLineShader, nullptr);
+        PixelLineShader[0], PixelLineShader[1], ELightingModel::None);
 
     // Fog Shader
     ShaderManager.CreatePixelShader(
@@ -226,10 +228,9 @@ void FRenderer::ReleaseShader()
     // 중복 Release로 Crash 터짐, 중복 Release가 안 막아진다.
     ShaderManager.ReleaseShader(InputLayout, VertexShader, PixelShader);
     ShaderManager.ReleaseShader(TextureInputLayout, VertexTextureShader, PixelTextureShader);
-    ShaderManager.ReleaseShader(nullptr, VertexLineShader, PixelLineShader);
 }
 
-void FRenderer::ReleaseUberShader()
+void FRenderer::ReleaseHotReloadShader()
 {
     // [0] 과 [1]이 다르다는 건 [1]이 옛날꺼고 [0]이 성공적으로 컴파일 되었다는것
     if (UberInputLayout[0] != UberInputLayout[1])
@@ -264,6 +265,16 @@ void FRenderer::ReleaseUberShader()
     if (UnlitPS[0] != UnlitPS[1]) 
     {
         UnlitPS[1]->Release();
+    }
+
+    if (VertexLineShader[0] != VertexLineShader[1]) 
+    {
+        VertexLineShader[1]->Release();
+    }
+
+    if (PixelLineShader[0] != PixelLineShader[1]) 
+    {
+        PixelLineShader[1]->Release();
     }
 }
 
@@ -388,8 +399,8 @@ void FRenderer::PrepareGizmoShader() const
 
 void FRenderer::PrepareLineShader() const
 {
-    Graphics->DeviceContext->VSSetShader(VertexLineShader, nullptr, 0);
-    Graphics->DeviceContext->PSSetShader(PixelLineShader, nullptr, 0);
+    Graphics->DeviceContext->VSSetShader(VertexLineShader[0], nullptr, 0);
+    Graphics->DeviceContext->PSSetShader(PixelLineShader[0], nullptr, 0);
 
     if (ConstantBuffer && GridConstantBuffer)
     {
@@ -979,9 +990,22 @@ bool FRenderer::UberIsOutDate()
     return CurrentUberWriteTime != LastUberWriteTime;
 }
 
+bool FRenderer::LineIsOutDate()
+{
+    auto CurrentLineWriteTime = std::filesystem::last_write_time("Shaders/ShaderLine.hlsl");
+    return CurrentLineWriteTime != LastLineWriteTime;
+}
+
 void FRenderer::HotReloadUberShader()
 {
     if (UberIsOutDate()) 
+    {
+        Release();
+        CreateShader();
+        CreateConstantBuffer();
+    }
+
+    if (LineIsOutDate()) 
     {
         Release();
         CreateShader();
