@@ -539,14 +539,14 @@ public:
         }
         
         FWString BinaryPath = (PathFileName + ".bin").ToWideString();
-        if (std::ifstream(BinaryPath).good())
-        {
-            if (LoadStaticMeshFromBinary(BinaryPath, *NewStaticMesh))
-            {
-                ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
-                return NewStaticMesh;
-            }
-        }
+        //if (std::ifstream(BinaryPath).good())
+        //{
+        //    if (LoadStaticMeshFromBinary(BinaryPath, *NewStaticMesh))
+        //    {
+        //        ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
+        //        return NewStaticMesh;
+        //    }
+        //}
         
         // Parse OBJ
         FObjInfo NewObjInfo;
@@ -584,7 +584,7 @@ public:
             return nullptr;
         }
 
-        SaveStaticMeshToBinary(BinaryPath, *NewStaticMesh);
+        SaveStaticMeshToBinary(BinaryPath, *NewStaticMesh); // TODO: Tangent 추가해도 바이너리 저장 정상 작동하게 변경
         ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
         return NewStaticMesh;
     }
