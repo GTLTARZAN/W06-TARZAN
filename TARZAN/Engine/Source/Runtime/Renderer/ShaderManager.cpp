@@ -1,5 +1,6 @@
 #include "ShaderManager.h"
 #include <d3dcompiler.h>
+#include "tinyfiledialogs/tinyfiledialogs.h"
 
 void FShaderManager::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext)
 {
@@ -16,9 +17,11 @@ bool FShaderManager::CreateVertexShader(
     const FWString& vsPath,
     const FString& vsEntry,
     ID3D11VertexShader*& outVS,
+    ID3D11VertexShader*& backUpVS,
     const D3D11_INPUT_ELEMENT_DESC* inputLayoutDesc,
     UINT numElements,
     ID3D11InputLayout** outInputLayout,
+    ID3D11InputLayout** backUpInputLayout,
     UINT* outStride,
     UINT vertexSize,
     ELightingModel lightingModel)
@@ -59,15 +62,86 @@ bool FShaderManager::CreateVertexShader(
 
     ID3DBlob* vsBlob = nullptr;
     HRESULT hr = D3DCompileFromFile(vsPath.c_str(), defines_Vertex, nullptr, *vsEntry, "vs_5_0", shaderFlags, 0, &vsBlob, nullptr);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr)) 
+    {
+        if (backUpVS != nullptr) 
+        {
+            tinyfd_messageBox("Error", "핫 리 로 드 실패, BackUp Shader 적용.", "ok", "error", 1);
+            outVS = backUpVS;
+        }
+        return false;
+    }
 
      hr = Device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &outVS);
-    if (FAILED(hr)) { vsBlob->Release(); return false; }
+    if (FAILED(hr)) 
+    { 
+        if (backUpVS != nullptr)
+        {
+            tinyfd_messageBox("Error", "핫 리 로 드 실패, BackUp Shader 적용.", "ok", "error", 1);
+            outVS = backUpVS;
+        }
+        vsBlob->Release(); 
+        return false;
+    }
+
+    if (backUpVS == nullptr) // backUpVS가 비었으면 넣어주기
+    {
+        backUpVS = outVS;
+    }
 
     if (outInputLayout)
     {
         hr = Device->CreateInputLayout(inputLayoutDesc, numElements, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), outInputLayout);
-        if (FAILED(hr)) { vsBlob->Release(); return false; }
+        if (FAILED(hr)) 
+        { 
+            tinyfd_messageBox("Error", "핫 리 로 드 실패, BackUp InputLayout 적용.", "ok", "error", 1);
+            outInputLayout = backUpInputLayout;
+            vsBlob->Release(); 
+            return false; 
+        }
+    }
+    if (outStride)
+        *outStride = vertexSize;
+
+    if (backUpInputLayout == nullptr) // backUpInputLayout 비었으면 넣어주기
+    {
+        backUpInputLayout = outInputLayout;
+    }
+
+    vsBlob->Release();
+    return true;
+}
+
+
+
+bool FShaderManager::CreateVertexShader(const FWString& vsPath, const FString& vsEntry, ID3D11VertexShader*& outVS, const D3D11_INPUT_ELEMENT_DESC* inputLayoutDesc, UINT numElements, ID3D11InputLayout** outInputLayout, UINT* outStride, UINT vertexSize, ELightingModel lightingModel)
+{
+    DWORD shaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+    shaderFlags |= D3DCOMPILE_DEBUG;
+    shaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
+
+    ID3DBlob* vsBlob = nullptr;
+    HRESULT hr = D3DCompileFromFile(vsPath.c_str(), nullptr, nullptr, *vsEntry, "vs_5_0", shaderFlags, 0, &vsBlob, nullptr);
+    if (FAILED(hr))
+    {
+        return false;
+    }
+
+    hr = Device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &outVS);
+    if (FAILED(hr))
+    {
+        vsBlob->Release();
+        return false;
+    }
+
+    if (outInputLayout)
+    {
+        hr = Device->CreateInputLayout(inputLayoutDesc, numElements, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), outInputLayout);
+        if (FAILED(hr))
+        {
+            vsBlob->Release();
+            return false;
+        }
     }
     if (outStride)
         *outStride = vertexSize;
@@ -80,6 +154,7 @@ bool FShaderManager::CreatePixelShader(
     const FWString& psPath,
     const FString& psEntry,
     ID3D11PixelShader*& outPS,
+    ID3D11PixelShader* backUpPS,
     ELightingModel lightingModel)
 {
     DWORD shaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
@@ -146,6 +221,29 @@ bool FShaderManager::CreatePixelShader(
 
     ID3DBlob* psBlob = nullptr;
     HRESULT hr = D3DCompileFromFile(psPath.c_str(), defines_Pixel, nullptr, *psEntry, "ps_5_0", shaderFlags, 0, &psBlob, nullptr);
+
+    if (FAILED(hr))
+    {
+        if (backUpPS != nullptr) 
+        {
+            tinyfd_messageBox("Error", "핫 리 로 드 실패, BackUp Shader 적용.", "ok", "error", 1);
+            outPS = backUpPS;
+        }
+        return false;
+    }
+    hr = Device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &outPS);
+    psBlob->Release();
+    return SUCCEEDED(hr);
+}
+
+bool FShaderManager::CreatePixelShader(const FWString& psPath, const FString& psEntry, ID3D11PixelShader*& outPS, ELightingModel lightingModel)
+{
+    DWORD shaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+    shaderFlags |= D3DCOMPILE_DEBUG;
+    shaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
+
+    ID3DBlob* psBlob = nullptr;
+    HRESULT hr = D3DCompileFromFile(psPath.c_str(), nullptr, nullptr, *psEntry, "ps_5_0", shaderFlags, 0, &psBlob, nullptr);
 
     hr = Device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &outPS);
     psBlob->Release();

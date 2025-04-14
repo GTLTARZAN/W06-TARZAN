@@ -152,38 +152,11 @@ void FRenderer::CreateShader()
 
     ShaderManager.CreatePixelShader(L"Shaders/LightingPassPixelShader.hlsl", "main", LightingPassPS);
 #else
-    D3D11_INPUT_ELEMENT_DESC UberLayout[] = 
-    {
-        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"MATERIAL_INDEX", 0, DXGI_FORMAT_R32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
-    };
-
-    // Create NormalVertxShader
-    ShaderManager.CreateVertexShader(L"Shaders/Uber.hlsl", "Uber_VS",
-        NormalVS, UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout, &Stride, sizeof(FVertexSimple), ELightingModel::Lambert);
-    
-    // Create GouraudVertexShader
-    ShaderManager.CreateVertexShader(L"Shaders/Uber.hlsl", "Uber_VS",
-        GouraudVS, UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout, &Stride, sizeof(FVertexSimple), ELightingModel::Gouraud);
-
-    // Create UnlitPixelShader
-    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", UnlitPS, ELightingModel::Unlit);
-
-    // Create GouraudPixelShader
-    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", GouraudPS, ELightingModel::Gouraud);
-
-    // Create LambertPixelShader
-    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", LambertPS, ELightingModel::Lambert);
-
-    // Create BlinnPhongPixelShader
-    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", BlinnPhongPS, ELightingModel::BlinnPhong);
+    CreateUberShader();
 
 #endif
 
-    ShaderManager.CreatePixelShader(L"Shaders/GizmoPixelShader.hlsl", "main", GizmoPixelShader);
+    ShaderManager.CreatePixelShader(L"Shaders/GizmoPixelShader.hlsl", "main", GizmoPixelShader, nullptr);
 
     // Texture Shader
     D3D11_INPUT_ELEMENT_DESC textureLayout[] = {
@@ -195,7 +168,7 @@ void FRenderer::CreateShader()
         VertexTextureShader, textureLayout, ARRAYSIZE(textureLayout), &TextureInputLayout, &TextureStride, sizeof(FVertexTexture));
     ShaderManager.CreatePixelShader(
         L"Shaders/PixelTextureShader.hlsl", "main",
-        PixelTextureShader);
+        PixelTextureShader, nullptr);
 
     // Line Shader
     ShaderManager.CreateVertexShader(
@@ -203,33 +176,100 @@ void FRenderer::CreateShader()
         VertexLineShader, nullptr, 0); // 라인 셰이더는 Layout 안 쓰면 nullptr 전달
     ShaderManager.CreatePixelShader(
         L"Shaders/ShaderLine.hlsl", "mainPS",
-        PixelLineShader);
+        PixelLineShader, nullptr);
 
     // Fog Shader
     ShaderManager.CreatePixelShader(
-        L"Shaders/PostProcessPixelShader.hlsl", "mainPS", PostProcessPassPS);
+        L"Shaders/PostProcessPixelShader.hlsl", "mainPS", PostProcessPassPS, nullptr);
+}
+
+void FRenderer::CreateUberShader()
+{
+    LastUberWriteTime = std::filesystem::last_write_time("Shaders/Uber.hlsl");
+
+    D3D11_INPUT_ELEMENT_DESC UberLayout[] =
+    {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"MATERIAL_INDEX", 0, DXGI_FORMAT_R32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
+    };
+
+    // Create NormalVertxShader
+    ShaderManager.CreateVertexShader(L"Shaders/Uber.hlsl", "Uber_VS",
+        NormalVS[0], NormalVS[1], UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout[0], &UberInputLayout[1], 
+        &Stride, sizeof(FVertexSimple), ELightingModel::Lambert);
+
+    // Create GouraudVertexShader
+    ShaderManager.CreateVertexShader(L"Shaders/Uber.hlsl", "Uber_VS",
+        GouraudVS[0], GouraudVS[1], UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout[0], &UberInputLayout[1], 
+        &Stride, sizeof(FVertexSimple), ELightingModel::Gouraud);
+
+    // Create UnlitPixelShader
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", UnlitPS[0], UnlitPS[1], ELightingModel::Unlit);
+
+    // Create GouraudPixelShader
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", GouraudPS[0], GouraudPS[1], ELightingModel::Gouraud);
+
+    // Create LambertPixelShader
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", LambertPS[0], LambertPS[1], ELightingModel::Lambert);
+
+    // Create BlinnPhongPixelShader
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", BlinnPhongPS[0], BlinnPhongPS[1], ELightingModel::BlinnPhong);
 }
 
 void FRenderer::ReleaseShader()
 {
-    UberInputLayout->Release();
-    GouraudVS->Release();
-    GouraudPS->Release();
-    NormalVS->Release();
-    LambertPS->Release();
-    BlinnPhongPS->Release();
-    UnlitPS->Release();
+    // UberShader 관련 부분들은 Hot Reload에 대한 대응이 필요하여 ReleaseUberShader에서 따로 처리
 
-    // 위 변수들의 Release에 ReleaseShader 함수를 쓰는 경우 
     // 중복 Release로 Crash 터짐, 중복 Release가 안 막아진다.
     ShaderManager.ReleaseShader(InputLayout, VertexShader, PixelShader);
     ShaderManager.ReleaseShader(TextureInputLayout, VertexTextureShader, PixelTextureShader);
     ShaderManager.ReleaseShader(nullptr, VertexLineShader, PixelLineShader);
 }
 
+void FRenderer::ReleaseUberShader()
+{
+    // [0] 과 [1]이 다르다는 건 [1]이 옛날꺼고 [0]이 성공적으로 컴파일 되었다는것
+    if (UberInputLayout[0] != UberInputLayout[1])
+    {
+        UberInputLayout[1]->Release();
+    }
+
+    if (GouraudVS[0] != GouraudVS[1])
+    {
+        GouraudVS[1]->Release();
+    }
+
+    if (GouraudPS[0] != GouraudPS[1])
+    {
+        GouraudPS[1]->Release();
+    }
+
+    if (NormalVS[0] != NormalVS[1])
+    {
+        NormalVS[1]->Release();
+    }
+    if (LambertPS[0] != LambertPS[1])
+    {
+        LambertPS[1]->Release();
+    }
+
+    if (BlinnPhongPS[0] != BlinnPhongPS[1]) 
+    {
+        BlinnPhongPS[1]->Release();
+    }
+
+    if (UnlitPS[0] != UnlitPS[1]) 
+    {
+        UnlitPS[1]->Release();
+    }
+}
+
 void FRenderer::PrepareUberShader() const
 {
-    Graphics->DeviceContext->IASetInputLayout(UberInputLayout);
+    Graphics->DeviceContext->IASetInputLayout(UberInputLayout[0]);
 
     switch (ActiveViewport->GetLighitingModel())
     {
@@ -237,20 +277,20 @@ void FRenderer::PrepareUberShader() const
         UE_LOG(LogLevel::Display, "No LightingModel");
         break;
     case ELightingModel::Gouraud:
-        Graphics->DeviceContext->VSSetShader(GouraudVS, nullptr, 0);
-        Graphics->DeviceContext->PSSetShader(GouraudPS, nullptr, 0);
+        Graphics->DeviceContext->VSSetShader(GouraudVS[0], nullptr, 0);
+        Graphics->DeviceContext->PSSetShader(GouraudPS[0], nullptr, 0);
         break;
     case ELightingModel::Lambert:
-        Graphics->DeviceContext->VSSetShader(NormalVS, nullptr, 0);
-        Graphics->DeviceContext->PSSetShader(LambertPS, nullptr, 0);
+        Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
+        Graphics->DeviceContext->PSSetShader(LambertPS[0], nullptr, 0);
         break;
     case ELightingModel::BlinnPhong:
-        Graphics->DeviceContext->VSSetShader(NormalVS, nullptr, 0);
-        Graphics->DeviceContext->PSSetShader(BlinnPhongPS, nullptr, 0);
+        Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
+        Graphics->DeviceContext->PSSetShader(BlinnPhongPS[0], nullptr, 0);
         break;
     case ELightingModel::Unlit:
-        Graphics->DeviceContext->VSSetShader(NormalVS, nullptr, 0);
-        Graphics->DeviceContext->PSSetShader(UnlitPS, nullptr, 0);
+        Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
+        Graphics->DeviceContext->PSSetShader(UnlitPS[0], nullptr, 0);
         break;
     }
     
@@ -332,9 +372,9 @@ void FRenderer::PrepareSubUVConstant() const
 void FRenderer::PrepareGizmoShader() const
 {
 #if USE_GBUFFER
-    Graphics->DeviceContext->VSSetShader(GBufferVS, nullptr, 0);
+    Graphics->DeviceContext->VSSetShader(GBufferVS[0], nullptr, 0);
 #else
-    Graphics->DeviceContext->VSSetShader(NormalVS, nullptr, 0);
+    Graphics->DeviceContext->VSSetShader(NormalVS[1], nullptr, 0);
 #endif
     Graphics->DeviceContext->PSSetShader(GizmoPixelShader, nullptr, 0);
 
@@ -931,6 +971,22 @@ void FRenderer::RenderFullScreenQuad()
     Graphics->DeviceContext->IASetVertexBuffers(0, 1, &Quad.VertexTextureBuffer, &stride, &offset);
     Graphics->DeviceContext->IASetIndexBuffer(Quad.IndexTextureBuffer, DXGI_FORMAT_R32_UINT, 0);
     Graphics->DeviceContext->DrawIndexed(Quad.numIndices, 0, 0);
+}
+
+bool FRenderer::UberIsOutDate()
+{
+    auto CurrentUberWriteTime = std::filesystem::last_write_time("Shaders/Uber.hlsl");
+    return CurrentUberWriteTime != LastUberWriteTime;
+}
+
+void FRenderer::HotReloadUberShader()
+{
+    if (UberIsOutDate()) 
+    {
+        Release();
+        CreateShader();
+        CreateConstantBuffer();
+    }
 }
 
 void FRenderer::SubscribeToFogUpdates(UHeightFogComponent* HeightFog)

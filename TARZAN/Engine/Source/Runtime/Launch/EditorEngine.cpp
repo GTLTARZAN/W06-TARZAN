@@ -90,6 +90,7 @@ void UEditorEngine::Render()
     // TODO : 이거 잘 안되는 것 이유 파악 
      //GUObjectArray.ProcessPendingDestroyObjects();
 
+    renderer.HotReloadUberShader();
     renderer.Render();
 }
 
