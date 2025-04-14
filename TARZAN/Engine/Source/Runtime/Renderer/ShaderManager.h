@@ -19,6 +19,21 @@ public:
     void Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext);
     void Release();
 
+    // 함수 오버로딩을 활용한 Hot Reload 지원 CreateVertexShader
+    bool CreateVertexShader(
+        const FWString& vsPath,
+        const FString& vsEntry,
+        ID3D11VertexShader*& outVS,
+        ID3D11VertexShader*& BackUpVS,
+        const D3D11_INPUT_ELEMENT_DESC* inputLayoutDesc,
+        UINT numElements,
+        ID3D11InputLayout** outInputLayout = nullptr,
+        ID3D11InputLayout** backUpInputLayout = nullptr,
+        UINT* outStride = nullptr,
+        UINT vertexSize = 0,
+        ELightingModel lightingModel = ELightingModel::None);
+
+    // 기존 CreateVertexShader
     bool CreateVertexShader(
         const FWString& vsPath,
         const FString& vsEntry,
@@ -30,6 +45,15 @@ public:
         UINT vertexSize = 0,
         ELightingModel lightingModel = ELightingModel::None);
 
+    // 함수 오버로딩을 활용한 Hot Reload 지원 CreatePixelShader
+    bool CreatePixelShader(
+        const FWString& psPath,
+        const FString& psEntry,
+        ID3D11PixelShader*& outPS,
+        ID3D11PixelShader* backUpPS,
+        ELightingModel lightingModel = ELightingModel::None);
+
+    // 기존 CreatePixelShader
     bool CreatePixelShader(
         const FWString& psPath,
         const FString& psEntry,

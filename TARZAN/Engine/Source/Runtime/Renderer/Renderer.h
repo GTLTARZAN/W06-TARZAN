@@ -12,6 +12,7 @@
 #include "ShaderManager.h"
 #include "ConstantBufferUpdater.h"
 #include "Pass/RenderPass.h"
+#include <filesystem>
 
 class ULightComponentBase;
 class UFireballComponent;
@@ -47,33 +48,39 @@ public:
     ID3D11InputLayout* FullScreenInputLayout = nullptr;
     
 #pragma region UberShader
+    // Uber.hlsl이 마지막으로 수정된 시각
+    std::filesystem::file_time_type LastUberWriteTime;
+
     // Shading Model은 ViewPort마다 지정
 
+    // [0]에는 현재 사용되는 버전, [1]에는 가장 최근에 컴파일 성공한 버전을 넣어서
+    // 컴파일 실패한 경우에 대해 대처할 수 있도록 작업
+    
     // Uber Input Layout
-    ID3D11InputLayout* UberInputLayout = nullptr;
-
+    ID3D11InputLayout* UberInputLayout[2] = { nullptr, nullptr };
+    
     // Normal VertexShader (Not Use Gouraud Shading)
     // Used by Unlit, Lambert, Blinn-Phong
-    ID3D11VertexShader* NormalVS = nullptr;
+    ID3D11VertexShader* NormalVS[2] = { nullptr, nullptr };
 
     // Gouraud VertexShader
     // Used by Gouraud
-    ID3D11VertexShader* GouraudVS = nullptr;
+    ID3D11VertexShader* GouraudVS[2] = { nullptr, nullptr };
 
     // Gouruad PixelShader
     // Unlit과 내부 코드가 달라서 PixelShader 분리
-    ID3D11PixelShader* GouraudPS = nullptr;
+    ID3D11PixelShader* GouraudPS[2] = { nullptr, nullptr };
 
     // Lambert PixelShader
     // Used by Lambert
-    ID3D11PixelShader* LambertPS = nullptr;
+    ID3D11PixelShader* LambertPS[2] = { nullptr, nullptr };
 
     // BlinnPhong PixelShader
     // Used by BlinnPhong
-    ID3D11PixelShader* BlinnPhongPS = nullptr;
+    ID3D11PixelShader* BlinnPhongPS[2] = { nullptr, nullptr };
 
     // Unlit PixelShader
-    ID3D11PixelShader* UnlitPS = nullptr;
+    ID3D11PixelShader* UnlitPS[2] = { nullptr, nullptr };
 
 #pragma endregion
 
@@ -137,10 +144,12 @@ public:
     //Release
     void Release();
     void ReleaseShader();
+    void ReleaseUberShader();
     void ReleaseConstantBuffer();
 
     // Shader
     void CreateShader();
+    void CreateUberShader(); //UberShader는 Hot Reload를 지원하므로 파트 분리 하긴 했지만.. 전체 다 하는 것이 안전할 것 같다.
     void PrepareUberShader() const;
     void PrepareShader() const;
     void PrepareLightShader() const;
@@ -216,6 +225,10 @@ public:
     void RenderLight();
     void RenderBillboards();
     void RenderFullScreenQuad();
+
+    // Hot Reload
+    bool UberIsOutDate();
+    void HotReloadUberShader();
 private:
     // GBuffer
     TArray<UStaticMeshComponent*> StaticMeshObjs;
