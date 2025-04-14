@@ -1182,11 +1182,22 @@ void FRenderer::UpdateMaterial(const FObjMaterialInfo& MaterialInfo) const
     ConstantBufferUpdater.UpdateMaterialConstant(MaterialConstantBuffer, MaterialInfo);
 #endif
 
-    if (MaterialInfo.bHasTexture == true)
+    bool isHasTexture = MaterialInfo.bHasTexture || MaterialInfo.bHasNormalMap;
+    if (isHasTexture)
     {
-        std::shared_ptr<FTexture> texture = UEditorEngine::resourceMgr.GetTexture(MaterialInfo.DiffuseTexturePath);
-        Graphics->DeviceContext->PSSetShaderResources(0, 1, &texture->TextureSRV);
-        Graphics->DeviceContext->PSSetSamplers(0, 1, &texture->SamplerState);
+        if (MaterialInfo.bHasTexture == true)
+        {
+            std::shared_ptr<FTexture> texture = UEditorEngine::resourceMgr.GetTexture(MaterialInfo.DiffuseTexturePath);
+            Graphics->DeviceContext->PSSetShaderResources(0, 1, &texture->TextureSRV);
+            Graphics->DeviceContext->PSSetSamplers(0, 1, &texture->SamplerState);
+        }
+
+        if (MaterialInfo.bHasNormalMap)
+        {
+            std::shared_ptr<FTexture> normalMap = UEditorEngine::resourceMgr.GetTexture(MaterialInfo.BumpTexturePath);
+            Graphics->DeviceContext->PSSetShaderResources(1, 1, &normalMap->TextureSRV);
+            //Graphics->DeviceContext->PSSetSamplers(0, 1, &normalMap->SamplerState);
+        }
     }
     else
     {

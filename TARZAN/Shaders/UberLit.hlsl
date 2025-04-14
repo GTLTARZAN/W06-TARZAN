@@ -267,6 +267,9 @@ PS_OUT Uber_PS(VS_OUT Input)
     }
 #endif
     
+    float4 DiffuseMap = g_Texture.Sample(g_Sampler, Input.TexCoord);
+    finalPixel *= DiffuseMap;
+    
     Output.Color = finalPixel;
     Output.WorldPos = float4(Input.WorldPos.xyz, 0.5f);
     
