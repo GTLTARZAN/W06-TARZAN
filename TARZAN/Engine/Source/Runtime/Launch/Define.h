@@ -93,6 +93,7 @@ struct FObjMaterialInfo
     FString MTLName;  // newmtl : Material Name.
 
     bool bHasTexture = false;  // Has Texture?
+    bool bHasNormalMap = false;
     bool bTransparent = false; // Has alpha channel?
 
     FVector Diffuse;  // Kd : Diffuse (Vector4)
