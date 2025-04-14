@@ -1,4 +1,3 @@
-
 cbuffer MatrixBuffer : register(b0)
 {
     row_major float4x4 MVP;
@@ -26,7 +25,7 @@ cbuffer PrimitiveCounts : register(b3)
     int BoundingBoxCount; // 렌더링할 AABB의 개수
     int pad;
     int ConeCount; // 렌더링할 cone의 개수
-    int pad1;
+    int OBBCount;
 };
 struct FBoundingBoxData
 {
@@ -45,8 +44,18 @@ struct FConeData
     float4 Color;
     
     int ConeSegmentCount; // 원뿔 밑면 분할 수
-    float pad[3];
+    float3 pad;
 };
+
+struct FCircleData
+{
+    float3 CircleApex; // Circle 상의 한 점
+    float CircleRadius; // Circle의 반지름
+    float3 CircleBaseCenter; // Circle의 중심점
+    int CircleSegmentCount; // Circle의 분할 수
+    float4 Color;
+};
+
 struct FOrientedBoxCornerData
 {
     float3 corners[8]; // 회전/이동 된 월드 공간상의 8꼭짓점
@@ -55,6 +64,8 @@ struct FOrientedBoxCornerData
 StructuredBuffer<FBoundingBoxData> g_BoundingBoxes : register(t2);
 StructuredBuffer<FConeData> g_ConeData : register(t3);
 StructuredBuffer<FOrientedBoxCornerData> g_OrientedBoxes : register(t4);
+StructuredBuffer<FCircleData> g_Circles : register(t5);
+
 static const int BB_EdgeIndices[12][2] =
 {
     { 0, 1 },
@@ -196,10 +207,10 @@ float3 ComputeBoundingBoxPosition(uint bbInstanceID, uint edgeIndex, uint vertex
 float3 ComputeConePosition(uint globalInstanceID, uint vertexID)
 {
     // 모든 cone이 동일한 세그먼트 수를 가짐
-    int N = g_ConeData[0].ConeSegmentCount;
+    int N = 24;//g_ConeData[0].ConeSegmentCount;
     
-    uint coneIndex = globalInstanceID / (2 * N);
-    uint lineIndex = globalInstanceID % (2 * N);
+    uint coneIndex = globalInstanceID / (2 * N + 10);
+    uint lineIndex = globalInstanceID % (2 * N + 10);
     
     // cone 데이터 읽기
     FConeData cone = g_ConeData[coneIndex];
@@ -219,7 +230,7 @@ float3 ComputeConePosition(uint globalInstanceID, uint vertexID)
         float3 baseVertex = cone.ConeBaseCenter + (cos(angle) * u + sin(angle) * v) * cone.ConeRadius;
         return (vertexID == 0) ? cone.ConeApex : baseVertex;
     }
-    else
+    else if (lineIndex < (uint) 2 * N)
     {
         // 밑면 둘레 선분: 밑면상의 인접한 두 점을 잇는다.
         uint idx = lineIndex - N;
@@ -229,7 +240,99 @@ float3 ComputeConePosition(uint globalInstanceID, uint vertexID)
         float3 v1 = cone.ConeBaseCenter + (cos(angle1) * u + sin(angle1) * v) * cone.ConeRadius;
         return (vertexID == 0) ? v0 : v1;
     }
+    else
+    {
+        uint idx = lineIndex - 2 * N;
+
+        float radius = sqrt(cone.ConeRadius * cone.ConeRadius + cone.ConeHeight * cone.ConeHeight);
+        
+        // Cone의 각도 계산 (라디안)
+        float coneAngle = atan2(cone.ConeRadius, cone.ConeHeight);
+        
+        // Forward 벡터 (Cone의 방향)
+        float3 forward = normalize(cone.ConeApex - cone.ConeBaseCenter);
+        
+        // 임시 Up 벡터 (일반적으로 (0,1,0)을 사용)
+        float3 tempUp = float3(0, 1, 0);
+        
+        // Forward와 Up이 거의 평행한 경우를 대비해 다른 Up 벡터 사용
+        if (abs(dot(forward, tempUp)) > 0.99)
+        {
+            tempUp = float3(0, 0, 1);
+        }
+        
+        // Right 벡터 계산 (Forward와 Up의 외적)
+        float3 right = normalize(cross(forward, tempUp));
+        
+        // 최종 Up 벡터 계산 (Right와 Forward의 외적)
+        float3 up = normalize(cross(right, forward));
+
+        // Local Y축을 중심으로 하는 원 (Right와 Up 벡터 사용)
+        if (idx < 5)
+        {
+            float angle0 = coneAngle - (idx * 2.0f * coneAngle / 5.0f) + 3.14159265359f;
+            float angle1 = coneAngle - ((idx + 1) * 2.0f * coneAngle / 5.0f) + 3.14159265359f;
+            
+            float3 v0 = cone.ConeApex + (cos(angle0) * forward + sin(angle0) * up) * radius;
+            float3 v1 = cone.ConeApex + (cos(angle1) * forward + sin(angle1) * up) * radius;
+            return (vertexID == 0) ? v0 : v1;
+        }
+        // Local Z축을 중심으로 하는 원 (Forward와 Right 벡터 사용)
+        else
+        {
+            idx -= 5;
+            float angle0 = coneAngle - (idx * 2.0f * coneAngle / 5.0f) + 3.14159265359f;
+            float angle1 = coneAngle - ((idx + 1) * 2.0f * coneAngle / 5.0f) + 3.14159265359f;
+            
+            float3 v0 = cone.ConeApex + (cos(angle0) * forward + sin(angle0) * right) * radius;
+            float3 v1 = cone.ConeApex + (cos(angle1) * forward + sin(angle1) * right) * radius;
+            return (vertexID == 0) ? v0 : v1;
+        }
+    }
 }
+
+/////////////////////////////////////////////////
+// Circle 계산 함수
+/////////////////////////////////////////////////
+float3 ComputeCirclePosition(uint globalInstanceID, uint vertexID)
+{
+    int N = g_Circles[0].CircleSegmentCount;
+    
+    uint circleIndex = globalInstanceID / (3 * N);
+    uint lineIndex = globalInstanceID % (3 * N);
+    
+    uint axisIndex = (globalInstanceID % (3 * N)) / N;
+    
+    FCircleData circle = g_Circles[circleIndex];
+    
+    float3 axis;
+    if (axisIndex == 0)
+    {
+        axis = float3(1, 0, 0);
+    }
+    else if (axisIndex == 1)
+    {
+        axis = float3(0, 1, 0);
+    }
+    else
+    {
+        axis = float3(0, 0, 1);
+    }
+    
+    float3 arbitrary = abs(dot(axis, float3(0, 0, 1))) < 0.99 ? float3(0, 0, 1) : float3(0, 1, 0);
+    float3 u = normalize(cross(axis, arbitrary));
+    float3 v = cross(axis, u);
+    
+    uint idx = lineIndex;
+    float angle0 = idx * 6.28318530718 / N;
+    float angle1 = ((idx + 1) % N) * 6.28318530718 / N;
+    float3 v0 = circle.CircleBaseCenter + (cos(angle0) * u + sin(angle0) * v) * circle.CircleRadius;
+    float3 v1 = circle.CircleBaseCenter + (cos(angle1) * u + sin(angle1) * v) * circle.CircleRadius;
+    
+    return (vertexID == 0) ? v0 : v1;
+}
+
+
 /////////////////////////////////////////////////////////////////////////
 // OBB
 /////////////////////////////////////////////////////////////////////////
@@ -248,10 +351,13 @@ PS_INPUT mainVS(VS_INPUT input)
     PS_INPUT output;
     float3 pos;
     float4 color;
+
+    int ConeSegmentCount = 24;
     
     // Cone 하나당 (2 * SegmentCount) 선분.
     // ConeCount 개수만큼이므로 총 (2 * SegmentCount * ConeCount).
-    uint coneInstCnt = ConeCount * 2 * g_ConeData[0].ConeSegmentCount;
+    uint coneInstCnt = ConeCount * (2 * ConeSegmentCount + 10);
+    uint obbInstCnt = OBBCount * 12;
 
     // Grid / Axis / AABB 인스턴스 개수 계산
     uint gridLineCount = GridCount; // 그리드 라인
@@ -261,7 +367,9 @@ PS_INPUT mainVS(VS_INPUT input)
     // 1) "콘 인스턴스 시작" 지점
     uint coneInstanceStart = gridLineCount + axisCount + aabbInstanceCount;
     // 2) 그 다음(=콘 구간의 끝)이 곧 OBB 시작 지점
-    uint obbStart = coneInstanceStart + coneInstCnt;
+    uint obbInstanceStart = coneInstanceStart + coneInstCnt;
+    // 3) 그 다음(= obb 구간의 끝)이 곧 Circle 시작 지점
+    uint circleInstanceStart = obbInstanceStart + obbInstCnt;
 
     // 이제 instanceID를 기준으로 분기
     if (input.instanceID < gridLineCount)
@@ -294,24 +402,31 @@ PS_INPUT mainVS(VS_INPUT input)
         pos = ComputeBoundingBoxPosition(bbInstanceID, bbEdgeIndex, input.vertexID);
         color = float4(1.0, 1.0, 0.0, 1.0); // 노란색
     }
-    else if (input.instanceID < obbStart)
+    else if (input.instanceID < obbInstanceStart)
     {
         // 그 다음 콘(Cone) 구간
         uint coneInstanceID = input.instanceID - coneInstanceStart;
         pos = ComputeConePosition(coneInstanceID, input.vertexID);
-        int N = g_ConeData[0].ConeSegmentCount;
-        uint coneIndex = coneInstanceID / (2 * N);
+        uint coneIndex = coneInstanceID / (2 * ConeSegmentCount + 10);
         
         color = g_ConeData[coneIndex].Color;
     }
-    else
+    else if (input.instanceID < circleInstanceStart)
     {
-        uint obbLocalID = input.instanceID - obbStart;
+        uint obbLocalID = input.instanceID - obbInstanceStart;
         uint obbIndex = obbLocalID / 12;
         uint edgeIndex = obbLocalID % 12;
 
         pos = ComputeOrientedBoxPosition(obbIndex, edgeIndex, input.vertexID);
         color = float4(0.4, 1.0, 0.4, 1.0); // 예시: 연두색
+    }
+    else
+    {
+        uint circleInstanceID = input.instanceID - circleInstanceStart;
+        pos = ComputeCirclePosition(circleInstanceID, input.vertexID);
+        uint circleIndex = circleInstanceID / (3 * g_Circles[0].CircleSegmentCount);
+        
+        color = g_Circles[circleIndex].Color;
     }
 
     // 출력 변환

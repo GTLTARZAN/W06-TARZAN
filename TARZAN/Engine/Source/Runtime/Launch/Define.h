@@ -17,11 +17,12 @@
 #define _TCHAR_DEFINED
 
 #define Max_Fireball 300
+#define NUM_POINT_LIGHT 4
+#define NUM_SPOT_LIGHT 4
 
 #include <d3d11.h>
 
 #include "UserInterface/Console.h"
-
 
 struct FVertexSimple
 {
@@ -30,6 +31,16 @@ struct FVertexSimple
     float nx, ny, nz;
     float u=0, v=0;
     uint32 MaterialIndex;
+};
+
+struct FVertexUnlit
+{
+    //FVector Position;
+    //FLinearColor Color;
+    //FVector2D UV;
+    float x, y, z;
+    float r, g, b, a;
+    float u = 0, v = 0;
 };
 
 // Material Subset
@@ -82,6 +93,7 @@ struct FObjMaterialInfo
     FString MTLName;  // newmtl : Material Name.
 
     bool bHasTexture = false;  // Has Texture?
+    bool bHasNormalMap = false;
     bool bTransparent = false; // Has alpha channel?
 
     FVector Diffuse;  // Kd : Diffuse (Vector4)
@@ -268,12 +280,22 @@ struct FCone
     float pad[3];
 
 };
+
+struct FCircle 
+{
+    FVector CircleApex; // Circle 상의 한 점
+    float CircleRadius; // Circle의 반지름
+    FVector CircleBaseCenter;   // Circle의 중심점
+    int CircleSegmentCount;    // Circle의 분할 수
+    FLinearColor Color;
+};
+
 struct FPrimitiveCounts 
 {
 	int BoundingBoxCount;
 	int pad;
 	int ConeCount; 
-	int pad1;
+    int OBBCount;
 };
 struct FLighting
 {
@@ -308,6 +330,66 @@ struct FConstants {
     FVector2D ScreenSize;
     FVector2D ViewportSize;
 };
+
+#pragma region Uber
+struct FObjectMatrixConstants 
+{
+    FMatrix World;
+    FMatrix View;
+    FMatrix Projection;
+};
+
+struct FCameraConstant 
+{
+    FVector CameraWorldPos;
+    float Padding;
+};
+
+struct FAmbientLightInfo
+{
+    FLinearColor Color;
+    float Intensity;
+    FVector Pad;
+};
+
+struct FDirectionalLightInfo
+{
+    FLinearColor Color;
+    FVector Direction;
+    float Intensity;
+};
+
+struct FPointLightInfo
+{
+    FLinearColor Color;
+    FVector Position;
+    float Intensity;
+    float AttenuationRadius;
+    float LightFalloffExponent;
+    FVector2D Pad;
+};
+
+struct FSpotLightInfo
+{
+    FLinearColor Color;
+    FVector Position;
+    FVector Direction;
+    float Intensity;
+    float AttenuationRadius;
+    float LightFalloffExponent;
+    float InnerConeAngle;
+    float OuterConeAngle;
+    float Pad;
+};
+
+struct FLightConstants 
+{
+    FAmbientLightInfo Ambient;
+    FDirectionalLightInfo Directional;
+    FPointLightInfo PointLights[NUM_POINT_LIGHT];
+    FSpotLightInfo SpotLights[NUM_SPOT_LIGHT];
+};
+#pragma endregion
 
 struct FLitUnlitConstants {
     int isLit; // 1 = Lit, 0 = Unlit 
@@ -397,6 +479,19 @@ struct FFireballArrayInfo
     FVector padding;
 };
 
+struct FPointLightArrayInfo
+{
+    FPointLightInfo PointLightConstants[NUM_POINT_LIGHT];
+    int PointLightCount = 0;
+    FVector padding;
+};
+
+struct FSpotLightArrayInfo 
+{
+    FSpotLightInfo SpotLightConstants[NUM_SPOT_LIGHT];
+    int SpotLightCount = 0;
+    FVector padding;
+};
 
 struct FFogConstants    
 {

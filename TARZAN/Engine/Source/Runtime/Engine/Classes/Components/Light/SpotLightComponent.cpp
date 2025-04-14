@@ -1,28 +1,29 @@
-#include "SpotLightComp.h"
+#include "SpotLightComponent.h"
 #include "UObject/ObjectFactory.h"
 #include "Define.h"
+
 USpotLightComponent::USpotLightComponent()
 {
-    SetType(StaticClass()->GetName());
-    AABB.max = { 1,1,1 };
-    AABB.min = { -1,-1,-1 };
-    InnerSpotAngle = 15.0f;
-    OuterSpotAngle = 30.0f;
-    SetLightType(LightType::SpotLight);
+    InnerConeAngle = 15.0f;
+    OuterConeAngle = 30.0f;
 }
+
 USpotLightComponent::USpotLightComponent(const USpotLightComponent& Other)
-    : UFireballComponent(Other)
-    , InnerSpotAngle(Other.InnerSpotAngle)
-    , OuterSpotAngle(Other.OuterSpotAngle)
+    : UPointLightComponent(Other)
 {
+    InnerConeAngle = Other.InnerConeAngle;
+    OuterConeAngle = Other.OuterConeAngle;
 }
+
 USpotLightComponent::~USpotLightComponent()
 {
 }
+
 void USpotLightComponent::InitializeComponent()
 {
     Super::InitializeComponent();
 }
+
 void USpotLightComponent::TickComponent(float DeltaTime)
 {
     Super::TickComponent(DeltaTime);
@@ -37,8 +38,8 @@ void USpotLightComponent::GetProperties(TMap<FString, FString>& OutProperties) c
 {
     Super::GetProperties(OutProperties);
 
-    OutProperties.Add(TEXT("InnerSpotAngle"), FString::Printf(TEXT("%f"), InnerSpotAngle));
-    OutProperties.Add(TEXT("OuterSpotAngle"), FString::Printf(TEXT("%f"), OuterSpotAngle));
+    OutProperties.Add(TEXT("InnerConeAngle"), FString::Printf(TEXT("%f"), InnerConeAngle));
+    OutProperties.Add(TEXT("OuterConeAngle"), FString::Printf(TEXT("%f"), OuterConeAngle));
 }
 
 void USpotLightComponent::SetProperties(const TMap<FString, FString>& InProperties)
@@ -46,16 +47,21 @@ void USpotLightComponent::SetProperties(const TMap<FString, FString>& InProperti
     Super::SetProperties(InProperties);
 
     const FString* TempStr = nullptr;
-    TempStr = InProperties.Find(TEXT("InnerSpotAngle"));
+    TempStr = InProperties.Find(TEXT("InnerConeAngle"));
     if (TempStr)
     {
-        InnerSpotAngle = FString::ToFloat(*TempStr);
+        InnerConeAngle = FString::ToFloat(*TempStr);
     }
-    TempStr = InProperties.Find(TEXT("OuterSpotAngle"));
+    TempStr = InProperties.Find(TEXT("OuterConeAngle"));
     if (TempStr)
     {
-        OuterSpotAngle = FString::ToFloat(*TempStr);
+        OuterConeAngle = FString::ToFloat(*TempStr);
     }
+}
+
+void USpotLightComponent::SetBoundingBox(const FBoundingBox& InAABB)
+{
+    AABB = InAABB;
 }
 
 void USpotLightComponent::DuplicateSubObjects(const UObject* Source)

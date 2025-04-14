@@ -339,6 +339,23 @@ struct FLoaderOBJ
 
                 CreateTextureFromFile(OutFStaticMesh.Materials[MaterialIndex].DiffuseTexturePath);
             }
+            
+            if (Token == "map_Bump")
+            {
+                LineStream >> std::ws;
+                std::string TextureFileName;
+                std::getline(LineStream, TextureFileName);
+
+                OutFStaticMesh.Materials[MaterialIndex].BumpTextureName = FString((TextureFileName.c_str()));
+
+                std::wstring FullTexturePathW = OutObjInfo.PathName + OutFStaticMesh.Materials[MaterialIndex].BumpTextureName.ToWideString();
+
+                OutFStaticMesh.Materials[MaterialIndex].BumpTexturePath = FullTexturePathW;
+                OutFStaticMesh.Materials[MaterialIndex].bHasNormalMap = true;
+
+                CreateTextureFromFile(OutFStaticMesh.Materials[MaterialIndex].BumpTexturePath);
+            }
+
         }
         
         return true;

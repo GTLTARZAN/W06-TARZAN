@@ -4,25 +4,25 @@
 
 #include "Engine/World.h"
 #include "Actors/Player.h"
-#include "BaseGizmos/GizmoBaseComponent.h"
-#include "Components/LightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/UBillboardComponent.h"
 #include "Components/UParticleSubUVComp.h"
+#include "Components/Light/LightComponent.h"
+#include "Components/Light/SpotLightComponent.h"
+#include "Components/FireballComp.h"
+#include "Components/UHeightFogComponent.h"
+#include "Components/SkySphereComponent.h"
+#include "BaseGizmos/GizmoBaseComponent.h"
 #include "Components/UText.h"
 #include "Components/Material/Material.h"
-#include "D3D11RHI/GraphicDevice.h"
 #include "Launch/EditorEngine.h"
 #include "Math/JungleMath.h"
-#include "UnrealEd/EditorViewportClient.h"
 #include "UnrealEd/PrimitiveBatch.h"
 #include "UObject/Casts.h"
 #include "UObject/Object.h"
 #include "PropertyEditor/ShowFlags.h"
 #include "UObject/UObjectIterator.h"
-#include "Components/SkySphereComponent.h"
-#include "Components/FireballComp.h"
-#include "SpotLightComp.h"
+#include "D3D11RHI/GraphicDevice.h"
 #include "Renderer/Pass/GBufferPass.h"
 #include "Renderer/Pass/LightingPass.h"
 #include "Renderer/Pass/PostProcessPass.h"
@@ -30,16 +30,16 @@
 #include "Editor/LevelEditor/SLevelEditor.h"
 #include "Runtime/Launch/ImGuiManager.h"
 #include "UnrealEd/UnrealEd.h"
-#include "Components/UHeightFogComponent.h"
+#include "UnrealEd/EditorViewportClient.h"
 
 extern UEditorEngine* GEngine;
 
 #pragma region Base
 FRenderer::~FRenderer() {}
 
-void FRenderer::Initialize(FGraphicsDevice* graphics)
+void FRenderer::Initialize(FGraphicsDevice* InGraphics)
 {
-    Graphics = graphics;
+    Graphics = InGraphics;
     RenderResourceManager.Initialize(Graphics->Device);
     ShaderManager.Initialize(Graphics->Device, Graphics->DeviceContext);
     ConstantBufferUpdater.Initialize(Graphics->DeviceContext);
@@ -58,7 +58,7 @@ void FRenderer::Render()
     //DeprecatedRender();
 
     SLevelEditor* LevelEditor = GEngine->GetLevelEditor();
-    std::shared_ptr<FEditorViewportClient> CurrentViewport = LevelEditor->GetActiveViewportClient();
+    const std::shared_ptr<FEditorViewportClient> CurrentViewport = LevelEditor->GetActiveViewportClient();
     World = GEngine->GetWorld();
 
     Graphics->Prepare();
@@ -91,9 +91,13 @@ void FRenderer::RenderPass()
     Graphics->ChangeRasterizer(ActiveViewport->GetViewMode());
     ChangeViewMode(ActiveViewport->GetViewMode());
 
+#if USE_GBUFFER
     RenderGBuffer();
 
     RenderLightPass();
+#else
+    RenderUberPass();
+#endif
 
     RenderPostProcessPass();
     RenderOverlayPass();
@@ -131,6 +135,7 @@ void FRenderer::CreateShader()
         L"Shaders/FullScreenVertexShader.hlsl", "main", FullScreenVS,
         fullscreenLayout, ARRAYSIZE(fullscreenLayout), &FullScreenInputLayout, &FullScreenStride, sizeof(FVertexTexture));
 
+#if USE_GBUFFER
     // GBuffer Shader
     D3D11_INPUT_ELEMENT_DESC GBufferLayout[] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -146,8 +151,12 @@ void FRenderer::CreateShader()
     ShaderManager.CreatePixelShader(L"Shaders/MeshPixelShader.hlsl", "main", GBufferPS);
 
     ShaderManager.CreatePixelShader(L"Shaders/LightingPassPixelShader.hlsl", "main", LightingPassPS);
+#else
+    CreateUberShader();
 
-    ShaderManager.CreatePixelShader(L"Shaders/GizmoPixelShader.hlsl", "main", GizmoPixelShader);
+#endif
+
+    ShaderManager.CreatePixelShader(L"Shaders/GizmoPixelShader.hlsl", "main", GizmoPixelShader, nullptr);
 
     // Texture Shader
     D3D11_INPUT_ELEMENT_DESC textureLayout[] = {
@@ -159,26 +168,153 @@ void FRenderer::CreateShader()
         VertexTextureShader, textureLayout, ARRAYSIZE(textureLayout), &TextureInputLayout, &TextureStride, sizeof(FVertexTexture));
     ShaderManager.CreatePixelShader(
         L"Shaders/PixelTextureShader.hlsl", "main",
-        PixelTextureShader);
+        PixelTextureShader, nullptr);
 
     // Line Shader
+    LastLineWriteTime = std::filesystem::last_write_time("Shaders/ShaderLine.hlsl");
+
     ShaderManager.CreateVertexShader(
         L"Shaders/ShaderLine.hlsl", "mainVS",
-        VertexLineShader, nullptr, 0); // 라인 셰이더는 Layout 안 쓰면 nullptr 전달
+        VertexLineShader[0], VertexLineShader[1], nullptr, 0); // 라인 셰이더는 Layout 안 쓰면 nullptr 전달
     ShaderManager.CreatePixelShader(
         L"Shaders/ShaderLine.hlsl", "mainPS",
-        PixelLineShader);
+        PixelLineShader[0], PixelLineShader[1], ELightingModel::None);
 
     // Fog Shader
     ShaderManager.CreatePixelShader(
-        L"Shaders/PostProcessPixelShader.hlsl", "mainPS", PostProcessPassPS);
+        L"Shaders/PostProcessPixelShader.hlsl", "mainPS", PostProcessPassPS, nullptr);
+}
+
+void FRenderer::CreateUberShader()
+{
+    LastUberWriteTime = std::filesystem::last_write_time("Shaders/Uber.hlsl");
+
+    D3D11_INPUT_ELEMENT_DESC UberLayout[] =
+    {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"MATERIAL_INDEX", 0, DXGI_FORMAT_R32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
+    };
+
+    // Create NormalVertxShader
+    ShaderManager.CreateVertexShader(L"Shaders/Uber.hlsl", "Uber_VS",
+        NormalVS[0], NormalVS[1], UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout[0], &UberInputLayout[1], 
+        &Stride, sizeof(FVertexSimple), ELightingModel::Lambert);
+
+    // Create GouraudVertexShader
+    ShaderManager.CreateVertexShader(L"Shaders/Uber.hlsl", "Uber_VS",
+        GouraudVS[0], GouraudVS[1], UberLayout, ARRAYSIZE(UberLayout), &UberInputLayout[0], &UberInputLayout[1], 
+        &Stride, sizeof(FVertexSimple), ELightingModel::Gouraud);
+
+    // Create UnlitPixelShader
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", UnlitPS[0], UnlitPS[1], ELightingModel::Unlit);
+
+    // Create GouraudPixelShader
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", GouraudPS[0], GouraudPS[1], ELightingModel::Gouraud);
+
+    // Create LambertPixelShader
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", LambertPS[0], LambertPS[1], ELightingModel::Lambert);
+
+    // Create BlinnPhongPixelShader
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", BlinnPhongPS[0], BlinnPhongPS[1], ELightingModel::BlinnPhong);
 }
 
 void FRenderer::ReleaseShader()
 {
+    // UberShader 관련 부분들은 Hot Reload에 대한 대응이 필요하여 ReleaseUberShader에서 따로 처리
+
+    // 중복 Release로 Crash 터짐, 중복 Release가 안 막아진다.
     ShaderManager.ReleaseShader(InputLayout, VertexShader, PixelShader);
     ShaderManager.ReleaseShader(TextureInputLayout, VertexTextureShader, PixelTextureShader);
-    ShaderManager.ReleaseShader(nullptr, VertexLineShader, PixelLineShader);
+}
+
+void FRenderer::ReleaseHotReloadShader()
+{
+    // [0] 과 [1]이 다르다는 건 [1]이 옛날꺼고 [0]이 성공적으로 컴파일 되었다는것
+    if (UberInputLayout[0] != UberInputLayout[1])
+    {
+        UberInputLayout[1]->Release();
+    }
+
+    if (GouraudVS[0] != GouraudVS[1])
+    {
+        GouraudVS[1]->Release();
+    }
+
+    if (GouraudPS[0] != GouraudPS[1])
+    {
+        GouraudPS[1]->Release();
+    }
+
+    if (NormalVS[0] != NormalVS[1])
+    {
+        NormalVS[1]->Release();
+    }
+    if (LambertPS[0] != LambertPS[1])
+    {
+        LambertPS[1]->Release();
+    }
+
+    if (BlinnPhongPS[0] != BlinnPhongPS[1]) 
+    {
+        BlinnPhongPS[1]->Release();
+    }
+
+    if (UnlitPS[0] != UnlitPS[1]) 
+    {
+        UnlitPS[1]->Release();
+    }
+
+    if (VertexLineShader[0] != VertexLineShader[1]) 
+    {
+        VertexLineShader[1]->Release();
+    }
+
+    if (PixelLineShader[0] != PixelLineShader[1]) 
+    {
+        PixelLineShader[1]->Release();
+    }
+}
+
+void FRenderer::PrepareUberShader() const
+{
+    Graphics->DeviceContext->IASetInputLayout(UberInputLayout[0]);
+
+    switch (ActiveViewport->GetLighitingModel())
+    {
+    case ELightingModel::None:
+        UE_LOG(LogLevel::Display, "No LightingModel");
+        break;
+    case ELightingModel::Gouraud:
+        Graphics->DeviceContext->VSSetShader(GouraudVS[0], nullptr, 0);
+        Graphics->DeviceContext->PSSetShader(GouraudPS[0], nullptr, 0);
+        break;
+    case ELightingModel::Lambert:
+        Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
+        Graphics->DeviceContext->PSSetShader(LambertPS[0], nullptr, 0);
+        break;
+    case ELightingModel::BlinnPhong:
+        Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
+        Graphics->DeviceContext->PSSetShader(BlinnPhongPS[0], nullptr, 0);
+        break;
+    case ELightingModel::Unlit:
+        Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
+        Graphics->DeviceContext->PSSetShader(UnlitPS[0], nullptr, 0);
+        break;
+    }
+    
+    if (ObjectMatrixConstantBuffer)
+    {
+        Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ObjectMatrixConstantBuffer);
+        Graphics->DeviceContext->VSSetConstantBuffers(1, 1, &CameraConstantBuffer);
+        Graphics->DeviceContext->VSSetConstantBuffers(2, 1, &LightConstantBuffer);
+        Graphics->DeviceContext->VSSetConstantBuffers(3, 1, &MaterialConstantBuffer);
+
+        Graphics->DeviceContext->PSSetConstantBuffers(2, 1, &LightConstantBuffer);
+        Graphics->DeviceContext->PSSetConstantBuffers(3, 1, &MaterialConstantBuffer);
+    }
 }
 
 // Prepare
@@ -191,7 +327,7 @@ void FRenderer::PrepareShader() const
     if (ConstantBuffer)
     {
         Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ConstantBuffer);
-        Graphics->DeviceContext->PSSetConstantBuffers(0, 1, &MaterialConstantBuffer);
+        Graphics->DeviceContext->PSSetConstantBuffers(0, 1, &GMaterialConstantBuffer);
     }
 }
 
@@ -212,13 +348,14 @@ void FRenderer::PrepareLightShader() const
 
 void FRenderer::PreparePostProcessShader() const
 {
-    //Graphics->DeviceContext->VSSetShader(FullScreenVS, nullptr, 0);
+    Graphics->DeviceContext->VSSetShader(FullScreenVS, nullptr, 0);
     Graphics->DeviceContext->PSSetShader(PostProcessPassPS, nullptr, 0);
-    //Graphics->DeviceContext->IASetInputLayout(FullScreenInputLayout);
+    Graphics->DeviceContext->IASetInputLayout(FullScreenInputLayout);
 
     if (FogConstantBuffer)
     {
         Graphics->DeviceContext->PSSetConstantBuffers(0, 1, &FogConstantBuffer);
+        Graphics->DeviceContext->PSSetConstantBuffers(2, 1, &ScreenConstantBuffer);
     }
 }
 
@@ -245,20 +382,25 @@ void FRenderer::PrepareSubUVConstant() const
 
 void FRenderer::PrepareGizmoShader() const
 {
-    Graphics->DeviceContext->VSSetShader(GBufferVS, nullptr, 0);
+#if USE_GBUFFER
+    Graphics->DeviceContext->VSSetShader(GBufferVS[0], nullptr, 0);
+#else
+    Graphics->DeviceContext->VSSetShader(NormalVS[1], nullptr, 0);
+#endif
     Graphics->DeviceContext->PSSetShader(GizmoPixelShader, nullptr, 0);
 
-    if (ConstantBuffer)
+    if (ObjectMatrixConstantBuffer)
     {
-        Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ConstantBuffer);
+        Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ObjectMatrixConstantBuffer);
+
         Graphics->DeviceContext->PSSetConstantBuffers(0, 1, &MaterialConstantBuffer);
     }
 }
 
 void FRenderer::PrepareLineShader() const
 {
-    Graphics->DeviceContext->VSSetShader(VertexLineShader, nullptr, 0);
-    Graphics->DeviceContext->PSSetShader(PixelLineShader, nullptr, 0);
+    Graphics->DeviceContext->VSSetShader(VertexLineShader[0], nullptr, 0);
+    Graphics->DeviceContext->PSSetShader(PixelLineShader[0], nullptr, 0);
 
     if (ConstantBuffer && GridConstantBuffer)
     {
@@ -272,6 +414,8 @@ void FRenderer::PrepareLineShader() const
         Graphics->DeviceContext->VSSetShaderResources(2, 1, &pBBSRV);
         Graphics->DeviceContext->VSSetShaderResources(3, 1, &pConeSRV);
         Graphics->DeviceContext->VSSetShaderResources(4, 1, &pOBBSRV);
+        Graphics->DeviceContext->VSSetShaderResources(5, 1, &pCircleSRV);
+
 
     }
 }
@@ -292,7 +436,15 @@ void FRenderer::CreateConstantBuffer()
     FlagBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FLitUnlitConstants));
 
     ConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FConstants));
+#if USE_GBUFFER
+    GMaterialConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FMaterialConstants));
+#else
+    ObjectMatrixConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FObjectMatrixConstants));
+    CameraConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FCameraConstant));
+    LightConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FLightConstants));
     MaterialConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FMaterialConstants));
+#endif
+
 
     LPLightConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FLightConstant));
     FireballConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FFireballArrayInfo));
@@ -308,7 +460,7 @@ void FRenderer::ReleaseConstantBuffer()
     RenderResourceManager.ReleaseBuffer(SubUVConstantBuffer);
     RenderResourceManager.ReleaseBuffer(GridConstantBuffer);
     RenderResourceManager.ReleaseBuffer(LinePrimitiveBuffer);
-    RenderResourceManager.ReleaseBuffer(MaterialConstantBuffer);
+    RenderResourceManager.ReleaseBuffer(GMaterialConstantBuffer);
     RenderResourceManager.ReleaseBuffer(SubMeshConstantBuffer);
     RenderResourceManager.ReleaseBuffer(TextureConstantBuffer);
     RenderResourceManager.ReleaseBuffer(LightingBuffer);
@@ -540,7 +692,12 @@ void FRenderer::RenderTexturedModelPrimitive(
 
 void FRenderer::RenderStaticMeshes()
 {
+#if USE_GBUFFER
     PrepareShader();
+#else
+    PrepareUberShader();
+#endif
+
     for (UStaticMeshComponent* StaticMeshComp : StaticMeshObjs)
     {
         FMatrix Model = JungleMath::CreateModelMatrix(
@@ -548,22 +705,115 @@ void FRenderer::RenderStaticMeshes()
             StaticMeshComp->GetWorldRotation(),
             StaticMeshComp->GetWorldScale()
         );
-        FMatrix MVP = Model * ActiveViewport->GetViewMatrix() * ActiveViewport->GetProjectionMatrix();
-        FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(Model));
-        FVector4 UUIDColor = StaticMeshComp->EncodeUUID() / 255.0f;
+        
+        FObjectMatrixConstants MatrixConstant =
+        {
+            .World = Model,
+            .View = ActiveViewport->GetViewMatrix(),
+            .Projection = ActiveViewport->GetProjectionMatrix()
+        };
+        ConstantBufferUpdater.UpdateObjectMatrixConstants(ObjectMatrixConstantBuffer, MatrixConstant);
 
-        bool isSelected = World->GetSelectedActor() == StaticMeshComp->GetOwner();
-        ConstantBufferUpdater.UpdateConstantWithCamPos(ConstantBuffer,
-            MVP, Model, NormalMatrix, UUIDColor, isSelected, ActiveViewport->GetCameraLocation());
+        FCameraConstant CameraConstant =
+        {
+            .CameraWorldPos = ActiveViewport->GetCameraLocation()
+        };
+        ConstantBufferUpdater.UpdateCameraPositionConstants(CameraConstantBuffer, CameraConstant);
 
-        //if (USkySphereComponent* skysphere = Cast<USkySphereComponent>(StaticMeshComp))
-        //{
-        //    ConstantBufferUpdater.UpdateTextureConstant(TextureConstantBuffer, skysphere->UOffset, skysphere->VOffset);
-        //}
-        //else
-        //{
-        //    ConstantBufferUpdater.UpdateTextureConstant(TextureConstantBuffer, 0, 0);
-        //}
+        FAmbientLightInfo Ambient =
+        {
+            .Color = FLinearColor(0.1f, 0.1f, 0.1f, 1.f),
+            .Intensity = 1
+        };
+
+        FDirectionalLightInfo DirectionalLight =
+        {
+            .Color = FLinearColor(1.f, 1.f, 1.f, 1.f),
+            .Direction = FVector(1, -1, -1),
+            .Intensity = 1
+        };
+        // Point Light
+        std::unique_ptr<FPointLightArrayInfo> PointLightArrayInfo = std::make_unique<FPointLightArrayInfo>();
+        std::unique_ptr<FSpotLightArrayInfo> SpotLightArrayInfo = std::make_unique<FSpotLightArrayInfo>();
+        if (LightObjs.Num() > 0)
+        {
+            for (int i = 0; i < LightObjs.Num(); i++) 
+            {
+                // TODO: LIGHT 관련 클래스 만들고 작업필요합니다.
+                if (LightObjs[i]->IsA<UPointLightComponent>())
+                {
+                    if (UPointLightComponent* PointLight = Cast<UPointLightComponent>(LightObjs[i]))
+                    {
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Color = PointLight->GetColor();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Position = PointLight->GetWorldLocation();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Intensity = PointLight->GetIntensity();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].AttenuationRadius = PointLight->GetRadius();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].LightFalloffExponent = PointLight->GetLightFalloffExponent();
+                        PointLightArrayInfo->PointLightCount++;
+                    }
+                }
+                else if (LightObjs[i]->IsA<USpotLightComponent>())
+                {
+                    if (USpotLightComponent* SpotLight = Cast<USpotLightComponent>(LightObjs[i]))
+                    {
+
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Color = SpotLight->GetColor();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Position = SpotLight->GetWorldLocation();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Direction = SpotLight->GetForwardVector();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Intensity = SpotLight->GetIntensity();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].AttenuationRadius = SpotLight->GetRadius();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].InnerConeAngle = SpotLight->GetInnerConeAngle();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].OuterConeAngle = SpotLight->GetOuterConeAngle();
+                        SpotLightArrayInfo->SpotLightCount++;
+                    }
+                }
+            }
+        }
+
+        std::unique_ptr<FFireballArrayInfo> fireballArrayInfo = std::make_unique<FFireballArrayInfo>();
+        
+        if (FireballObjs.Num() > 0)
+        {
+            fireballArrayInfo->FireballCount = 0;
+        
+            for (int i = 0; i < FireballObjs.Num(); i++)
+            {
+                if (FireballObjs[i] != nullptr)
+                {
+                    const FFireballInfo& fireballInfo = FireballObjs[i]->GetFireballInfo();
+                    fireballArrayInfo->FireballConstants[i].Intensity = fireballInfo.Intensity;
+                    fireballArrayInfo->FireballConstants[i].Radius = fireballInfo.Radius;
+                    fireballArrayInfo->FireballConstants[i].Color = fireballInfo.Color;
+                    fireballArrayInfo->FireballConstants[i].RadiusFallOff = fireballInfo.RadiusFallOff;
+                    fireballArrayInfo->FireballConstants[i].Position = FireballObjs[i]->GetWorldLocation();
+                    fireballArrayInfo->FireballConstants[i].LightType = fireballInfo.Type;
+                    if (USpotLightComponent* spotLight = Cast<USpotLightComponent>(FireballObjs[i]))
+                    {
+                        fireballArrayInfo->FireballConstants[i].InnerAngle = spotLight->GetInnerConeAngle();
+                        fireballArrayInfo->FireballConstants[i].OuterAngle = spotLight->GetOuterConeAngle();
+                        fireballArrayInfo->FireballConstants[i].Direction = spotLight->GetForwardVector();
+                    }
+                    fireballArrayInfo->FireballCount++;
+                }
+            }
+        }
+
+        FPointLightInfo PointLight;
+        FSpotLightInfo SpotLight;
+
+        FLightConstants LightConstant =
+        {
+            .Ambient = Ambient,
+            .Directional = DirectionalLight,
+            .PointLights = PointLight,
+            .SpotLights = SpotLight,
+        };
+        ConstantBufferUpdater.UpdateLightConstants(LightConstantBuffer, LightConstant);
+
+        //FMatrix MVP = Model * ActiveViewport->GetViewMatrix() * ActiveViewport->GetProjectionMatrix();
+        //FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(Model));
+        //FVector4 UUIDColor = StaticMeshComp->EncodeUUID() / 255.0f;
+        //bool isSelected = World->GetSelectedActor() == StaticMeshComp->GetOwner();
 
         if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_AABB))
         {
@@ -622,6 +872,7 @@ void FRenderer::RenderGizmos()
             GizmoComp->GetWorldRotation(),
             GizmoComp->GetWorldScale()
         );
+#if USE_GBUFFER
         FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(Model));
         FVector4 UUIDColor = GizmoComp->EncodeUUID() / 255.0f;
 
@@ -631,7 +882,15 @@ void FRenderer::RenderGizmos()
             ConstantBufferUpdater.UpdateConstant(ConstantBuffer, MVP, Model, NormalMatrix, UUIDColor, true);
         else
             ConstantBufferUpdater.UpdateConstant(ConstantBuffer, MVP, Model, NormalMatrix, UUIDColor, false);
+#else
+        FObjectMatrixConstants objMatrixConstatnts = {
+            .World = Model,
+            .View = ActiveViewport->GetViewMatrix(),
+            .Projection = ActiveViewport->GetProjectionMatrix()
+        };
 
+        ConstantBufferUpdater.UpdateObjectMatrixConstants(ObjectMatrixConstantBuffer, objMatrixConstatnts);
+#endif
         if (!GizmoComp->GetStaticMesh()) continue;
 
         OBJ::FStaticMeshRenderData* renderData = GizmoComp->GetStaticMesh()->GetRenderData();
@@ -650,14 +909,19 @@ void FRenderer::RenderGizmos()
 
 void FRenderer::RenderBillboards()
 {
+#if !USE_GBUFFER
     PrepareTextureShader();
     PrepareSubUVConstant();
+#else
+    PrepareUberUnlitShader();
+#endif
     for (auto BillboardComp : BillboardObjs)
     {
         ConstantBufferUpdater.UpdateSubUVConstant(SubUVConstantBuffer, BillboardComp->finalIndexU, BillboardComp->finalIndexV);
 
         FMatrix Model = BillboardComp->CreateBillboardMatrix();
 
+#if !USE_GBUFFER
         // 최종 MVP 행렬
         FMatrix MVP = Model * ActiveViewport->GetViewMatrix() * ActiveViewport->GetProjectionMatrix();
         FMatrix NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(Model));
@@ -666,6 +930,15 @@ void FRenderer::RenderBillboards()
             ConstantBufferUpdater.UpdateConstant(ConstantBuffer, MVP, Model, NormalMatrix, UUIDColor, true);
         else
             ConstantBufferUpdater.UpdateConstant(ConstantBuffer, MVP, Model, NormalMatrix, UUIDColor, false);
+#else
+        FObjectMatrixConstants MatrixConstant =
+        {
+            .World = Model,
+            .View = ActiveViewport->GetViewMatrix(),
+            .Projection = ActiveViewport->GetProjectionMatrix()
+        };
+        ConstantBufferUpdater.UpdateObjectMatrixConstants(ObjectMatrixConstantBuffer, MatrixConstant);
+#endif
 
         if (UParticleSubUVComp* SubUVParticle = Cast<UParticleSubUVComp>(BillboardComp))
         {
@@ -693,7 +966,11 @@ void FRenderer::RenderBillboards()
             );
         }
     }
+#if USE_GBUFFER
     PrepareShader();
+#else
+    PrepareUberShader();
+#endif
 }
 
 void FRenderer::RenderFullScreenQuad()
@@ -705,6 +982,35 @@ void FRenderer::RenderFullScreenQuad()
     Graphics->DeviceContext->IASetVertexBuffers(0, 1, &Quad.VertexTextureBuffer, &stride, &offset);
     Graphics->DeviceContext->IASetIndexBuffer(Quad.IndexTextureBuffer, DXGI_FORMAT_R32_UINT, 0);
     Graphics->DeviceContext->DrawIndexed(Quad.numIndices, 0, 0);
+}
+
+bool FRenderer::UberIsOutDate()
+{
+    auto CurrentUberWriteTime = std::filesystem::last_write_time("Shaders/Uber.hlsl");
+    return CurrentUberWriteTime != LastUberWriteTime;
+}
+
+bool FRenderer::LineIsOutDate()
+{
+    auto CurrentLineWriteTime = std::filesystem::last_write_time("Shaders/ShaderLine.hlsl");
+    return CurrentLineWriteTime != LastLineWriteTime;
+}
+
+void FRenderer::HotReloadUberShader()
+{
+    if (UberIsOutDate()) 
+    {
+        Release();
+        CreateShader();
+        CreateConstantBuffer();
+    }
+
+    if (LineIsOutDate()) 
+    {
+        Release();
+        CreateShader();
+        CreateConstantBuffer();
+    }
 }
 
 void FRenderer::SubscribeToFogUpdates(UHeightFogComponent* HeightFog)
@@ -737,24 +1043,42 @@ void FRenderer::ResetFogUpdates()
 
 void FRenderer::RenderLight()
 {
-    for (auto Light : FireballObjs)
+    for (auto Light : LightObjs)
     {
-        if (Light->GetLightType() == LightType::SpotLight)
+        
+        if (Light->IsA<UPointLightComponent>() && !Light->IsA<USpotLightComponent>())
+        {
+            // PointLight를 상속 받은 경우에 대해
+            UPointLightComponent* PointLight = Cast<UPointLightComponent>(Light);
+            if (GEngine->GetWorld()->WorldType == EWorldType::PIE) continue;
+            FMatrix Model = JungleMath::CreateModelMatrix(PointLight->GetWorldLocation(), PointLight->GetWorldRotation(), { 1, 1, 1 });
+            UPrimitiveBatch::GetInstance().AddCircle(PointLight->GetWorldLocation(), PointLight->GetRadius(), 90, PointLight->GetColor(), Model);
+        }
+        if (Light->IsA<USpotLightComponent>())
         {
             USpotLightComponent* SpotLight = Cast<USpotLightComponent>(Light);
             if (SpotLight)
             {
                 if (GEngine->GetWorld()->WorldType == EWorldType::PIE) continue;
-                FMatrix Model = JungleMath::CreateModelMatrix(Light->GetWorldLocation(), Light->GetWorldRotation(), { 1, 1, 1 });
-                UPrimitiveBatch::GetInstance().AddCone(Light->GetWorldLocation(), Light->GetRadius() * tan(SpotLight->GetOuterSpotAngle() / 2 * 3.14 / 180.0f), Light->GetRadius(), 140, Light->GetColor(), Model);
-                UPrimitiveBatch::GetInstance().RenderOBB(Light->GetBoundingBox(), Light->GetWorldLocation(), Model);
+                FMatrix Model = JungleMath::CreateModelMatrix(SpotLight->GetWorldLocation(), SpotLight->GetWorldRotation(), { 1, 1, 1 });
+                UPrimitiveBatch::GetInstance().AddCone(SpotLight->GetWorldLocation(), SpotLight->GetRadius(), SpotLight->GetOuterConeAngle(), SpotLight->GetColor(), Model);
+                UPrimitiveBatch::GetInstance().AddCone(SpotLight->GetWorldLocation(), SpotLight->GetRadius(), SpotLight->GetInnerConeAngle(), SpotLight->GetColor() / 2, Model);
+                UPrimitiveBatch::GetInstance().RenderOBB(SpotLight->GetBoundingBox(), Light->GetWorldLocation(), Model);
+            }
+        }
+        if (Light->IsA<UDirectionalLightComponent>())
+        {
+            UDirectionalLightComponent* DirectionalLight = Cast<UDirectionalLightComponent>(Light);
+            if (DirectionalLight) 
+            {
+                // TODO: DirectionalLight의 Wireframe
             }
         }
     }
 }
 
 void FRenderer::RenderBatch(
-    const FGridParameters& gridParam, ID3D11Buffer* pVertexBuffer, int boundingBoxCount, int coneCount, int coneSegmentCount, int obbCount
+    const FGridParameters& gridParam, ID3D11Buffer* pVertexBuffer, int boundingBoxCount, int coneCount, int coneSegmentCount, int obbCount, int circleCount, int circleSegmentCount
 ) const
 {
     UINT stride = sizeof(FSimpleVertex);
@@ -763,16 +1087,31 @@ void FRenderer::RenderBatch(
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
     UINT vertexCountPerInstance = 2;
-    UINT instanceCount = gridParam.numGridLines + 3 + (boundingBoxCount * 12) + (coneCount * (2 * coneSegmentCount)) + (12 * obbCount);
+    UINT instanceCount = gridParam.numGridLines + 3 + (boundingBoxCount * 12) + (coneCount * (2 * coneSegmentCount + 10)) + (12 * obbCount) + (3 * circleCount * (circleSegmentCount));
     Graphics->DeviceContext->DrawInstanced(vertexCountPerInstance, instanceCount, 0, 0);
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 #pragma endregion Render
 
 #pragma region MultiPass
+void FRenderer::RenderUberPass()
+{
+    // StaticMesh
+    if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_Primitives)) 
+    {
+        RenderStaticMeshes();
+    }
+
+    // Billboard
+    if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_BillboardText)) 
+    {
+        RenderBillboards();
+    }
+}
+
 void FRenderer::RenderGBuffer()
 {
-    Graphics->DeviceContext->OMSetRenderTargets(4, Graphics->GBufferRTVs, Graphics->DepthStencilView);
+    //Graphics->DeviceContext->OMSetRenderTargets(4, Graphics->GBufferRTVs, Graphics->DepthStencilView);
 
     // StaticMesh
     if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_Primitives))
@@ -784,7 +1123,7 @@ void FRenderer::RenderGBuffer()
 }
 
 void FRenderer::RenderLightPass()
-{
+{  
     PrepareLightShader();
 
     //ID3D11RenderTargetView* rtv = Graphics->FrameBufferRTV;
@@ -827,8 +1166,8 @@ void FRenderer::RenderLightPass()
                 fireballArrayInfo->FireballConstants[i].LightType = fireballInfo.Type;
                 if (USpotLightComponent* spotLight = Cast<USpotLightComponent>(FireballObjs[i]))
                 {
-                    fireballArrayInfo->FireballConstants[i].InnerAngle = spotLight->GetInnerSpotAngle();
-                    fireballArrayInfo->FireballConstants[i].OuterAngle = spotLight->GetOuterSpotAngle();
+                    fireballArrayInfo->FireballConstants[i].InnerAngle = spotLight->GetInnerConeAngle();
+                    fireballArrayInfo->FireballConstants[i].OuterAngle = spotLight->GetOuterConeAngle();
                     fireballArrayInfo->FireballConstants[i].Direction = spotLight->GetForwardVector();
                 }
                 fireballArrayInfo->FireballCount++;
@@ -870,6 +1209,7 @@ void FRenderer::RenderPostProcessPass()
 
     // 2. Update Constant
     ConstantBufferUpdater.UpdateFogConstant(FogConstantBuffer, FogData);
+    ConstantBufferUpdater.UpdateScreenConstant(ScreenConstantBuffer, ActiveViewport);
 
     // 3. Set RTV
     ID3D11RenderTargetView* FrameBufferRTV = Graphics->FrameBufferRTV;
@@ -877,8 +1217,13 @@ void FRenderer::RenderPostProcessPass()
 
     // 4. Set SRV
     ID3D11ShaderResourceView* SRVs[] = {
+#if USE_GBUFFER
         Graphics->LightPassSRV_Color,
         Graphics->LightPassSRV_Position
+#else
+        Graphics->UberSRV_Color,
+        Graphics->UberSRV_Position
+#endif
     };
     Graphics->DeviceContext->PSSetShaderResources(0, 2, SRVs);
 
@@ -904,6 +1249,12 @@ void FRenderer::RenderOverlayPass()
     FVector4 CamPos4 = FVector4(CamPos.x, CamPos.y, CamPos.z, 1.f);
     float blendFactor[4] = { 0.f, 0.f, 0.f, 0.f };
     Graphics->DeviceContext->OMSetBlendState(Graphics->LineBlendState, blendFactor, 0xffffffff);
+    // LightPass 가 비활성화되었기에
+    // 기존 Light의 Wireframe을 호출해주던 함수를 여기에 위치시킴
+#if USE_GBUFFER
+#else
+    RenderLight();
+#endif
     UPrimitiveBatch::GetInstance().RenderBatch(ConstantBuffer, ActiveViewport->GetViewMatrix(), ActiveViewport->GetProjectionMatrix(), CamPos4);
     Graphics->DeviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
 
@@ -928,13 +1279,28 @@ void FRenderer::ChangeViewMode(EViewModeIndex evi) const
 
 void FRenderer::UpdateMaterial(const FObjMaterialInfo& MaterialInfo) const
 {
+#if USE_GBUFFER
+    ConstantBufferUpdater.UpdateMaterialConstant(GMaterialConstantBuffer, MaterialInfo);
+#else
     ConstantBufferUpdater.UpdateMaterialConstant(MaterialConstantBuffer, MaterialInfo);
+#endif
 
-    if (MaterialInfo.bHasTexture == true)
+    bool isHasTexture = MaterialInfo.bHasTexture || MaterialInfo.bHasNormalMap;
+    if (isHasTexture)
     {
-        std::shared_ptr<FTexture> texture = UEditorEngine::resourceMgr.GetTexture(MaterialInfo.DiffuseTexturePath);
-        Graphics->DeviceContext->PSSetShaderResources(0, 1, &texture->TextureSRV);
-        Graphics->DeviceContext->PSSetSamplers(0, 1, &texture->SamplerState);
+        if (MaterialInfo.bHasTexture == true)
+        {
+            std::shared_ptr<FTexture> texture = UEditorEngine::resourceMgr.GetTexture(MaterialInfo.DiffuseTexturePath);
+            Graphics->DeviceContext->PSSetShaderResources(0, 1, &texture->TextureSRV);
+            Graphics->DeviceContext->PSSetSamplers(0, 1, &texture->SamplerState);
+        }
+
+        if (MaterialInfo.bHasNormalMap)
+        {
+            std::shared_ptr<FTexture> normalMap = UEditorEngine::resourceMgr.GetTexture(MaterialInfo.BumpTexturePath);
+            Graphics->DeviceContext->PSSetShaderResources(1, 1, &normalMap->TextureSRV);
+            //Graphics->DeviceContext->PSSetSamplers(0, 1, &normalMap->SamplerState);
+        }
     }
     else
     {
@@ -983,6 +1349,19 @@ ID3D11ShaderResourceView* FRenderer::CreateConeSRV(ID3D11Buffer* pConeBuffer, UI
     return pConeSRV;
 }
 
+ID3D11ShaderResourceView* FRenderer::CreateCircleSRV(ID3D11Buffer* pCircleBuffer, UINT numCircles)
+{
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+    srvDesc.Buffer.ElementOffset = 0;
+    srvDesc.Buffer.NumElements = numCircles;
+
+
+    Graphics->Device->CreateShaderResourceView(pCircleBuffer, &srvDesc, &pCircleSRV);
+    return pCircleSRV;
+}
+
 void FRenderer::UpdateBoundingBoxBuffer(ID3D11Buffer* pBoundingBoxBuffer, const TArray<FBoundingBox>& BoundingBoxes, int numBoundingBoxes) const
 {
     if (!pBoundingBoxBuffer) return;
@@ -1022,6 +1401,19 @@ void FRenderer::UpdateConesBuffer(ID3D11Buffer* pConeBuffer, const TArray<FCone>
     Graphics->DeviceContext->Unmap(pConeBuffer, 0);
 }
 
+void FRenderer::UpdateCirclesBuffer(ID3D11Buffer* pCircleBuffer, const TArray<FCircle>& Circles, int numCircles) const
+{
+    if (!pCircleBuffer) return;
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+    Graphics->DeviceContext->Map(pCircleBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+    auto pData = reinterpret_cast<FCircle*>(mappedResource.pData);
+    for (int i = 0; i < Circles.Num(); ++i)
+    {
+        pData[i] = Circles[i];
+    }
+    Graphics->DeviceContext->Unmap(pCircleBuffer, 0);
+}
+
 void FRenderer::UpdateGridConstantBuffer(const FGridParameters& gridParams) const
 {
     D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -1037,13 +1429,14 @@ void FRenderer::UpdateGridConstantBuffer(const FGridParameters& gridParams) cons
     }
 }
 
-void FRenderer::UpdateLinePrimitveCountBuffer(int numBoundingBoxes, int numCones) const
+void FRenderer::UpdateLinePrimitveCountBuffer(int numBoundingBoxes, int numCones, int numOBBs) const
 {
     D3D11_MAPPED_SUBRESOURCE mappedResource;
     HRESULT hr = Graphics->DeviceContext->Map(LinePrimitiveBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
     auto pData = static_cast<FPrimitiveCounts*>(mappedResource.pData);
     pData->BoundingBoxCount = numBoundingBoxes;
     pData->ConeCount = numCones;
+    pData->OBBCount = numOBBs;
     Graphics->DeviceContext->Unmap(LinePrimitiveBuffer, 0);
 }
 

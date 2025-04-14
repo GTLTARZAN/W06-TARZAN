@@ -228,7 +228,7 @@
     <ClCompile Include="Engine\Source\ThirdParty\include\ImGUI\imgui_impl_win32.cpp" />
     <ClCompile Include="Engine\Source\ThirdParty\include\ImGUI\imgui_tables.cpp" />
     <ClCompile Include="Engine\Source\ThirdParty\include\ImGUI\imgui_widgets.cpp" />
-    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\LightComponent.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\Light\LightComponent.cpp" />
     <ClCompile Include="Engine\Source\Editor\PropertyEditor\ShowFlags.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\SkySphereComponent.cpp" />
     <ClCompile Include="Engine\Source\Runtime\InteractiveToolsFramework\BaseGizmos\TransformGizmo.cpp" />
@@ -252,7 +252,7 @@
     <ClCompile Include="Engine\Source\Runtime\Renderer\RenderResourceManager.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Renderer\ShaderManager.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\FireballComp.cpp" />
-    <ClCompile Include="SpotLightComp.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\Light\SpotLightComponent.cpp" />
     <ClCompile Include="UEditorStateManager.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\UHeightFogComponent.cpp" />
   </ItemGroup>
@@ -337,7 +337,7 @@
     <ClInclude Include="Engine\Source\ThirdParty\include\ImGUI\imstb_truetype.h" />
     <ClInclude Include="Engine\Source\Editor\PropertyEditor\IWindowToggleable.h" />
     <ClInclude Include="Engine\Source\ThirdParty\JSON\json.hpp" />
-    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\LightComponent.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\Light\LightComponent.h" />
     <ClInclude Include="Engine\Source\Editor\PropertyEditor\ShowFlags.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\SkySphereComponent.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Engine\Texture.h" />
@@ -382,7 +382,7 @@
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\UTextUUID.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\World.h" />
     <ClInclude Include="Engine\Source\Runtime\Renderer\RenderResourceManager.h" />
-    <ClInclude Include="SpotLightComp.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\Light\SpotLightComponent.h" />
     <ClInclude Include="UEditorStateManager.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\UHeightFogComponent.h" />
   </ItemGroup>
@@ -451,7 +451,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="Shaders\UberLit.hlsl" />
+    <FxCompile Include="Shaders\Uber.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="Shaders\VertexTextureShader.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>

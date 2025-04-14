@@ -28,6 +28,19 @@ public:
     ID3D11RasterizerState* RasterizerStateWIREFRAME = nullptr;
     DXGI_SWAP_CHAIN_DESC SwapchainDesc;
 
+
+    // Uber Shader
+    ID3D11Texture2D* UberTexture_Color = nullptr;
+    ID3D11Texture2D* UberTexture_Position = nullptr;
+
+    ID3D11RenderTargetView* UberRTV_Color = nullptr;
+    ID3D11RenderTargetView* UberRTV_Position = nullptr;
+
+    ID3D11ShaderResourceView* UberSRV_Color = nullptr;
+    ID3D11ShaderResourceView* UberSRV_Position = nullptr;
+
+    ID3D11RenderTargetView* UberRTVs[2];
+
     // GBuffer(Normal, Albedo)
     ID3D11Texture2D* GBufferTexture_Normal = nullptr;
     ID3D11Texture2D* GBufferTexture_Albedo = nullptr;
@@ -82,26 +95,30 @@ public:
     void CreateDepthStencilBuffer(HWND hWindow);
     void CreateDepthStencilState();
     void CreateRasterizerState();
+    void CreateUber();
     void CreateGBuffer();
     void CreateFrameBuffer();
     void CreateLightPassBuffer();
     void CreateBlendState();
     
     void ReleaseDeviceAndSwapChain();
+    void ReleaseUber();
     void ReleaseGBuffer();
     void ReleaseFrameBuffer();
     void ReleaseLightPassBuffer();
+    void ReleasePostProcess();
+    void ReleaseOverlay();
     void ReleaseRasterizerState();
     void ReleaseDepthStencilResources();
     void ReleaseBlendState();
     void Release();
     
-    void SwapBuffer();
-    void Prepare();
+    void SwapBuffer() const;
+    void Prepare() const;
     void OnResize(HWND hWindow);
     ID3D11RasterizerState* GetCurrentRasterizer() { return CurrentRasterizer; }
     void ChangeRasterizer(EViewModeIndex evi);
-    void ChangeDepthStencilState(ID3D11DepthStencilState* newDetptStencil);
+    void ChangeDepthStencilState(ID3D11DepthStencilState* newDetptStencil) const;
 
     uint32 GetPixelUUID(POINT pt);
     uint32 DecodeUUIDColor(FVector4 UUIDColor);

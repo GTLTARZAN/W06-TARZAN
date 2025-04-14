@@ -2,21 +2,19 @@
 
 #include "Engine/World.h"
 #include "Actors/Player.h"
-#include "Components/CubeComp.h"
-#include "Components/LightComponent.h"
+#include "Components/Light/LightComponent.h"
 #include "Components/SphereComp.h"
 #include "Components/UParticleSubUVComp.h"
 #include "Components/UText.h"
 #include "Engine/FLoaderOBJ.h"
 #include "Engine/StaticMeshActor.h"
-#include "ImGUI/imgui_internal.h"
 #include "LevelEditor/SLevelEditor.h"
 #include "tinyfiledialogs/tinyfiledialogs.h"
 #include "UnrealEd/EditorViewportClient.h"
 #include "PropertyEditor/ShowFlags.h"
 #include "UnrealEd/SceneMgr.h"
 #include "Components/UHeightFogComponent.h"
-#include "SpotLightComp.h"
+#include "Components/Light/SpotLightComponent.h"
 #include "Components/FireballComp.h"
 #include "UEditorStateManager.h"
 #include "UObject/UObjectIterator.h"
@@ -265,16 +263,16 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
 
         static const Primitive primitives[] = {
             
-            { .label= "Sphere",      .obj= OBJ_SPHERE },
-            { .label= "Cone",        .obj= OBJ_Cone },
-            { .label= "Cylinder",    .obj= OBJ_Cylinder },
-            { .label= "Plane",       .obj= OBJ_Plane },
-            { .label= "Torus",       .obj= OBJ_Torus },
-            { .label= "Cube",      .obj= OBJ_CUBE },
-            { .label= "SpotLight", .obj= OBJ_SpotLight },
-            { .label= "Particle",  .obj= OBJ_PARTICLE },
-            { .label= "Text",      .obj= OBJ_Text },
-            {.label = "Fog",       .obj = OBJ_Fog},
+            { .label= "Cube",       .obj= OBJ_CUBE },
+            { .label= "Sphere",     .obj= OBJ_SPHERE },
+            { .label= "Cylinder",   .obj= OBJ_Cylinder },
+            { .label= "Plane",      .obj= OBJ_Plane },
+            { .label= "Cone",       .obj= OBJ_Cone },
+            { .label= "Torus",      .obj= OBJ_Torus },
+            { .label= "SpotLight",  .obj= OBJ_SpotLight },
+            { .label= "Particle",   .obj= OBJ_PARTICLE },
+            { .label= "Text",       .obj= OBJ_Text },
+            {.label = "Fog",        .obj = OBJ_Fog},
             {.label = "Fireball",   .obj = OBJ_Fireball }
             
         };
@@ -334,8 +332,6 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
                         MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Torus.obj"));
                         break;
                     }
-                    
-
                 case OBJ_StaticMesh:
                     {
                         TempActor = World->SpawnActor<AStaticMeshActor>();
@@ -478,6 +474,40 @@ void ControlEditorPanel::CreateFlagButton() const
     }
 
     ImGui::SameLine();
+
+    const char* ShadeModeNames[] = { "Gouraud", "Lambert", "Blinn-Phong" };
+    if (ActiveViewport->GetViewMode() == EViewModeIndex::VMI_Lit)
+    {
+        // Lit을 선택했을 때만 Shade를 선택할 수 있도록
+        FString SelectShaderControl = ShadeModeNames[(int)ActiveViewport->GetLighitingModel() - 1];
+        ImVec2 ShaderTextSize = ImGui::CalcTextSize(GetData(SelectShaderControl));
+
+        if (ImGui::Button(GetData(SelectShaderControl), ImVec2(30 + ShaderTextSize.x, 32))) 
+        {
+            ImGui::OpenPopup("ShaderControl");
+        }
+
+        if (ImGui::BeginPopup("ShaderControl"))
+        {
+            for (int i = 0; i < IM_ARRAYSIZE(ShadeModeNames); i++)
+            {
+                bool bIsSelected = ((int)ActiveViewport->GetLighitingModel() - 1 == i);
+                if (ImGui::Selectable(ShadeModeNames[i], bIsSelected))
+                {
+                    ActiveViewport->SetLightingModel((ELightingModel)(i + 1));
+                }
+
+                if (bIsSelected) 
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+
+            ImGui::EndPopup();
+        }
+
+        ImGui::SameLine();
+    }
     
     if (ImGui::Button("Show", ImVec2(60, 32)))
     {

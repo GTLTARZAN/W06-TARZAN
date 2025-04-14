@@ -328,5 +328,9 @@ void UText::TextMVPRendering()
     }
     //Super::Render();
 
+#if USE_GBUFFER
     UEditorEngine::renderer.PrepareShader();
+#else
+    UEditorEngine::renderer.PrepareUberShader();
+#endif
 }

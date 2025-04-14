@@ -1,5 +1,6 @@
 #include "PrimitiveBatch.h"
 #include "EditorEngine.h"
+#include "Math/MathUtility.h"
 #include "UnrealEd/EditorViewportClient.h"
 extern UEditorEngine* GEngine;
 
@@ -48,15 +49,22 @@ void UPrimitiveBatch::RenderBatch(ID3D11Buffer* ConstantBuffer, const FMatrix& V
     UpdateBoundingBoxResources();
     UpdateConeResources();
     UpdateOBBResources();
+    UpdateCircleResources();
     int boundingBoxSize = static_cast<int>(BoundingBoxes.Num());
     int coneSize = static_cast<int>(Cones.Num());
     int obbSize = static_cast<int>(OrientedBoundingBoxes.Num());
-    UEditorEngine::renderer.UpdateLinePrimitveCountBuffer(boundingBoxSize, coneSize);
-    UEditorEngine::renderer.RenderBatch(GridParam, pVertexBuffer, boundingBoxSize, coneSize, ConeSegmentCount, obbSize);
+    int circleSize = static_cast<int>(Circles.Num());
+    UEditorEngine::renderer.UpdateLinePrimitveCountBuffer(boundingBoxSize, coneSize, obbSize);
+    UEditorEngine::renderer.RenderBatch(GridParam, pVertexBuffer, boundingBoxSize, coneSize, ConeSegmentCount, obbSize, circleSize, CircleSegmentCount);
     BoundingBoxes.Empty();
     Cones.Empty();
+    Circles.Empty();
     OrientedBoundingBoxes.Empty();
+#if USE_GBUFFER
     UEditorEngine::renderer.PrepareShader();
+#else
+    UEditorEngine::renderer.PrepareUberShader();
+#endif
 }
 void UPrimitiveBatch::InitializeVertexBuffer()
 {
@@ -133,6 +141,29 @@ void UPrimitiveBatch::ReleaseOBBResources()
     if (pOBBBuffer) pOBBBuffer->Release();
     if (pOBBSRV) pOBBSRV->Release();
 }
+void UPrimitiveBatch::UpdateCircleResources()
+{
+    if (Circles.Num() > allocatedCircleCapacity) 
+    {
+        allocatedCircleCapacity = Circles.Num();
+
+        ReleaseCircleResources();
+
+        pCircleBuffer = UEditorEngine::renderer.GetResourceManager().CreateStructuredBuffer<FCircle>(static_cast<UINT>(allocatedCircleCapacity));
+        pCircleSRV = UEditorEngine::renderer.CreateCircleSRV(pCircleBuffer, static_cast<UINT>(allocatedCircleCapacity));
+    }
+
+    if (pCircleBuffer && pCircleSRV) 
+    {
+        int circleCount = static_cast<int>(Circles.Num());
+        UEditorEngine::renderer.UpdateCirclesBuffer(pCircleBuffer, Circles, circleCount);
+    }
+}
+void UPrimitiveBatch::ReleaseCircleResources()
+{
+    if (pCircleBuffer) pCircleBuffer->Release();
+    if (pCircleSRV) pCircleSRV->Release();
+}
 void UPrimitiveBatch::RenderAABB(const FBoundingBox& localAABB, const FVector& center, const FMatrix& modelMatrix)
 {
     FVector localVertices[8] = {
@@ -194,18 +225,35 @@ void UPrimitiveBatch::RenderOBB(const FBoundingBox& localAABB, const FVector& ce
 
 }
 
-void UPrimitiveBatch::AddCone(const FVector& center, float radius, float height, int segments, const FLinearColor& color, const FMatrix& modelMatrix)
+void UPrimitiveBatch::AddCone(const FVector& Center, const float Radius, float Angle, const FLinearColor& Color, const FMatrix& ModelMatrix)
 {
-    ConeSegmentCount = segments;
-    FVector localApex = FVector(0, 0, 0);
-    FCone cone;
-    cone.ConeApex = center + FMatrix::TransformVector(localApex, modelMatrix);
-    FVector localBaseCenter = FVector(height, 0, 0);
-    cone.ConeBaseCenter = center + FMatrix::TransformVector(localBaseCenter, modelMatrix);
-    cone.ConeRadius = radius;
-    cone.ConeHeight = height;
-    cone.Color = color;
-    cone.ConeSegmentCount = ConeSegmentCount;
-    Cones.Add(cone);
+    FCone Cone;
+
+    const auto LocalApex = FVector(0, 0, 0);
+    float Height = Radius * cos(FMath::DegreesToRadians(Angle)); // Height of the cone
+    const auto LocalBaseCenter = FVector(Height, 0, 0);    // Light's Radius
+    ConeSegmentCount = 24;//segments;
+
+    Cone.ConeApex = Center + FMatrix::TransformVector(LocalApex, ModelMatrix);
+    Cone.ConeBaseCenter = Center + FMatrix::TransformVector(LocalBaseCenter, ModelMatrix);
+    Cone.ConeRadius = tan(FMath::DegreesToRadians(Angle)) * Height;
+    Cone.ConeHeight = Height;
+    Cone.Color = Color;
+    Cone.ConeSegmentCount = ConeSegmentCount;
+
+    Cones.Add(Cone);
+}
+
+void UPrimitiveBatch::AddCircle(const FVector& center, float radius, int segments, const FLinearColor& color, const FMatrix& modelMatrix)
+{
+    CircleSegmentCount = segments;
+    FVector localApex = FVector(radius, 0, 0);
+    FCircle circle;
+    circle.CircleApex = center + FMatrix::TransformVector(localApex, modelMatrix);
+    circle.CircleBaseCenter = center;
+    circle.CircleRadius = radius;
+    circle.Color = color;
+    circle.CircleSegmentCount = CircleSegmentCount;
+    Circles.Add(circle);
 }
 

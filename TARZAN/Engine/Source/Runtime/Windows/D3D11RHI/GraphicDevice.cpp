@@ -6,8 +6,12 @@
 void FGraphicsDevice::Initialize(HWND hWindow) {
     CreateDeviceAndSwapChain(hWindow);
     CreateFrameBuffer();
+#if USE_GBUFFER
     CreateGBuffer();
     CreateLightPassBuffer();
+#else
+    CreateUber();
+#endif
     CreateDepthStencilBuffer(hWindow);
     CreateDepthStencilState();
     CreateRasterizerState();
@@ -156,6 +160,47 @@ void FGraphicsDevice::CreateRasterizerState()
     rasterizerdesc.FillMode = D3D11_FILL_WIREFRAME;
     rasterizerdesc.CullMode = D3D11_CULL_BACK;
     Device->CreateRasterizerState(&rasterizerdesc, &RasterizerStateWIREFRAME);
+}
+
+void FGraphicsDevice::CreateUber()
+{
+    D3D11_TEXTURE2D_DESC UberTexDesc = {};
+    {
+        UberTexDesc.Width = screenWidth;
+        UberTexDesc.Height = screenHeight;
+        UberTexDesc.MipLevels = 1;
+        UberTexDesc.ArraySize = 1;
+        UberTexDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+        UberTexDesc.SampleDesc.Count = 1;
+        UberTexDesc.Usage = D3D11_USAGE_DEFAULT;
+        UberTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+    }
+
+    D3D11_RENDER_TARGET_VIEW_DESC UberRTVDesc = {};
+    {
+        UberRTVDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;      // 색상 포맷
+        UberRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D; // 2D 텍스처
+    }
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC UberSRVDesc = {};
+    {
+        UberSRVDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+        UberSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        UberSRVDesc.Texture2D.MipLevels = 1;
+        UberSRVDesc.Texture2D.MostDetailedMip = 0;
+    }
+
+    Device->CreateTexture2D(&UberTexDesc, nullptr, &UberTexture_Color);
+    Device->CreateTexture2D(&UberTexDesc, nullptr, &UberTexture_Position);
+
+    Device->CreateRenderTargetView(UberTexture_Color, &UberRTVDesc, &UberRTV_Color);
+    Device->CreateRenderTargetView(UberTexture_Position, &UberRTVDesc, &UberRTV_Position);
+
+    Device->CreateShaderResourceView(UberTexture_Color, &UberSRVDesc, &UberSRV_Color);
+    Device->CreateShaderResourceView(UberTexture_Position, &UberSRVDesc, &UberSRV_Position);
+
+    UberRTVs[0] = UberRTV_Color;
+    UberRTVs[1] = UberRTV_Position;
 }
 
 void FGraphicsDevice::CreateGBuffer()
@@ -325,6 +370,17 @@ void FGraphicsDevice::ReleaseDeviceAndSwapChain()
     }
 }
 
+void FGraphicsDevice::ReleaseUber()
+{
+    if (UberTexture_Color) { UberTexture_Color->Release(); UberTexture_Color = nullptr; }
+    if (UberRTV_Color) { UberRTV_Color->Release();     UberRTV_Color = nullptr; }
+    if (UberSRV_Color) { UberSRV_Color->Release();     UberSRV_Color = nullptr; }
+
+    if (UberTexture_Position) { UberTexture_Position->Release(); UberTexture_Position = nullptr; }
+    if (UberRTV_Position) { UberRTV_Position->Release();     UberRTV_Position = nullptr; }
+    if (UberSRV_Position) { UberSRV_Position->Release();     UberSRV_Position = nullptr; }
+}
+
 void FGraphicsDevice::ReleaseGBuffer()
 {
     if (GBufferTexture_Normal) { GBufferTexture_Normal->Release(); GBufferTexture_Normal = nullptr; }
@@ -429,31 +485,41 @@ void FGraphicsDevice::Release()
     ReleaseRasterizerState();
     DeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
 
+#if USE_GBUFFER
     ReleaseGBuffer();
-    ReleaseFrameBuffer();
     ReleaseLightPassBuffer();
+#else
+    ReleaseUber();
+#endif
+    ReleaseFrameBuffer();
     ReleaseDepthStencilResources();
     ReleaseDeviceAndSwapChain();
     ReleaseBlendState();
 }
 
-void FGraphicsDevice::SwapBuffer() {
+void FGraphicsDevice::SwapBuffer() const
+{
     SwapChain->Present(1, 0);
 }
 
-void FGraphicsDevice::Prepare()
+void FGraphicsDevice::Prepare() const
 {
     DeviceContext->ClearRenderTargetView(FrameBufferRTV, ClearColor); // 렌더 타겟 뷰에 저장된 이전 프레임 데이터를 삭제
     DeviceContext->ClearRenderTargetView(UUIDFrameBufferRTV, ClearColor); 
   
+#if USE_GBUFFER
     DeviceContext->ClearRenderTargetView(GBufferRTV_Normal, ClearColor); 
     DeviceContext->ClearRenderTargetView(GBufferRTV_Albedo, ClearColor); 
     DeviceContext->ClearRenderTargetView(GBufferRTV_Ambient, ClearColor); 
     DeviceContext->ClearRenderTargetView(GBufferRTV_Position, ClearColor);
 
     DeviceContext->ClearRenderTargetView(LightPassRTV_Color, ClearColor);
-    DeviceContext->ClearRenderTargetView(LightPassRTV_Position, ClearColor)
-        ;
+    DeviceContext->ClearRenderTargetView(LightPassRTV_Position, ClearColor);
+#else
+    DeviceContext->ClearRenderTargetView(UberRTV_Color, ClearColor);
+    DeviceContext->ClearRenderTargetView(UberRTV_Position, ClearColor);
+#endif
+
     DeviceContext->ClearDepthStencilView(DepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0); // 깊이 버퍼 초기화 추가
 
     DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // 정정 연결 방식 설정
@@ -463,7 +529,11 @@ void FGraphicsDevice::Prepare()
 
     DeviceContext->OMSetDepthStencilState(DepthStencilState, 0);
 
+#if USE_GBUFFER
     DeviceContext->OMSetRenderTargets(4, GBufferRTVs, DepthStencilView);  // 렌더 타겟 설정(백버퍼를 가르킴)
+#else
+    DeviceContext->OMSetRenderTargets(2, UberRTVs, DepthStencilView);
+#endif
 
     DeviceContext->OMSetBlendState(nullptr, nullptr, 0xffffffff); // 블렌뎅 상태 설정, 기본블렌딩 상태임
 }
@@ -472,8 +542,12 @@ void FGraphicsDevice::OnResize(HWND hWindow)
 {
     // 먼저 기존 GBuffer 관련 리소스를 해제합니다.
     ReleaseFrameBuffer();
+#if USE_GBUFFER
     ReleaseGBuffer();
     ReleaseLightPassBuffer();
+#else
+    ReleaseUber();
+#endif
 
     if (DepthStencilView)
     {
@@ -496,8 +570,12 @@ void FGraphicsDevice::OnResize(HWND hWindow)
 
     // Buffer 재생성
     CreateFrameBuffer();
+#if USE_GBUFFER
     CreateGBuffer();
     CreateLightPassBuffer();
+#else
+    CreateUber();
+#endif
     CreateDepthStencilBuffer(hWindow);
 }
 
@@ -516,7 +594,7 @@ void FGraphicsDevice::ChangeRasterizer(EViewModeIndex evi)
     DeviceContext->RSSetState(CurrentRasterizer); //레스터 라이저 상태 설정
 }
 
-void FGraphicsDevice::ChangeDepthStencilState(ID3D11DepthStencilState* newDetptStencil)
+void FGraphicsDevice::ChangeDepthStencilState(ID3D11DepthStencilState* newDetptStencil) const
 {
     DeviceContext->OMSetDepthStencilState(newDetptStencil, 0);
 }

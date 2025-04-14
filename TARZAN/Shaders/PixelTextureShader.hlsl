@@ -36,7 +36,8 @@ PS_OUTPUT main(PS_INPUT input)
         clip(-1); // 픽셀 버리기
     
     //output.Color = col;
-    output.Albedo = float4(col.xyz, 0.7f);
+    output.Normal = float4(col.xyz, 0.5f);
+    output.Albedo = float4(col.xyz, 0.5f);
     //output.uuid = UUID;
     
     return output;

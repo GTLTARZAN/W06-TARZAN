@@ -206,3 +206,62 @@ void FConstantBufferUpdater::UpdateScreenConstant(ID3D11Buffer* ScreenConstantBu
         DeviceContext->Unmap(ScreenConstantBuffer, 0);
     }
 }
+
+void FConstantBufferUpdater::UpdateObjectMatrixConstants(ID3D11Buffer* ObjectMatrixConstantBuffer, const FObjectMatrixConstants& ObjectMatrix) const
+{
+    if (ObjectMatrixConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
+        DeviceContext->Map(ObjectMatrixConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
+        auto constants = static_cast<FObjectMatrixConstants*>(constantbufferMSR.pData);
+        constants->World = ObjectMatrix.World;
+        constants->View = ObjectMatrix.View;
+        constants->Projection = ObjectMatrix.Projection;
+        DeviceContext->Unmap(ObjectMatrixConstantBuffer, 0);
+    }
+}
+
+void FConstantBufferUpdater::UpdateCameraPositionConstants(ID3D11Buffer* CameraConstantBuffer, const FCameraConstant& CameraPosition) const
+{
+    if (CameraConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
+        DeviceContext->Map(CameraConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
+        auto constants = static_cast<FCameraConstant*>(constantbufferMSR.pData);
+        constants->CameraWorldPos = CameraPosition.CameraWorldPos;
+        DeviceContext->Unmap(CameraConstantBuffer, 0);
+    }
+}
+
+void FConstantBufferUpdater::UpdateLightConstants(ID3D11Buffer* LightConstantBuffer, const FLightConstants& Light) const
+{
+    if (LightConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
+        DeviceContext->Map(LightConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
+        auto constants = static_cast<FLightConstants*>(constantbufferMSR.pData);
+        constants->Ambient = Light.Ambient;
+        constants->Directional = Light.Directional;
+        memcpy(constants->PointLights, Light.PointLights, sizeof(Light.PointLights));
+        memcpy(constants->SpotLights, Light.SpotLights, sizeof(Light.SpotLights));
+        DeviceContext->Unmap(LightConstantBuffer, 0);
+    }
+}
+
+void FConstantBufferUpdater::UpdateMaterialConstants(ID3D11Buffer* MaterialConstantBuffer, const FMaterialConstants& Material) const
+{
+    if (MaterialConstantBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
+        DeviceContext->Map(MaterialConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
+        auto constants = static_cast<FMaterialConstants*>(constantbufferMSR.pData);
+        constants->DiffuseColor = Material.DiffuseColor;
+        constants->TransparencyScalar = Material.TransparencyScalar;
+        constants->AmbientColor = Material.AmbientColor;
+        constants->DensityScalar = Material.DensityScalar;
+        constants->SpecularColor = Material.SpecularColor;
+        constants->SpecularScalar = Material.SpecularScalar;
+        constants->EmmisiveColor = Material.EmmisiveColor;
+        DeviceContext->Unmap(MaterialConstantBuffer, 0);
+    }
+}
