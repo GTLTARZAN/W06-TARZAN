@@ -1,13 +1,9 @@
-// UberLit.hlsl
+// Uber.hlsl
 
 #define NUM_POINT_LIGHT 4
 #define NUM_SPOT_LIGHT 4
 
-// @todo Implement Compile with Defines
-#define LIGHTING_MODEL_GOURAUD 0
-#define LIGHTING_MODEL_LAMBERT 1
-#define LIGHTING_MODEL_PHONG 0
-#define UNLIT 0
+
 
 struct FAmbientLightInfo
 {
@@ -198,12 +194,8 @@ VS_OUT Uber_VS(VS_IN Input)
     }
     
     output.Color = finalColor;
-#elif LIGHTING_MODEL_LAMBERT
-    output.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-#elif LIGHTING_MODEL_PHONG
-    output.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-#elif UNLIT
-    output.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+#elif NORMAL_VERTEX
+    output.Color = Input.Color;
 #endif
     
     return output;
@@ -286,11 +278,11 @@ PS_OUT Uber_PS(VS_OUT Input)
 float4 CalculateDirectionalLightBlinnPhong(FDirectionalLightInfo info, float3 normal, float3 viewDir)
 {
     // Diffuse
-    float diff = max(dot(normal, info.Direction.xyz), 0.0f);
+    float diff = max(dot(normal, -info.Direction.xyz), 0.0f);
     
     // Specular
     
-    float3 halfDir = normalize(info.Direction.xyz + viewDir);
+    float3 halfDir = normalize(-info.Direction.xyz + viewDir);
     
     // TODO: 32 값은 Roughness 값으로 변수화 필요
     float spec = pow(max(dot(normal, halfDir), 0.0f), 32);

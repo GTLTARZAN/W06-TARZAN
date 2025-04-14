@@ -7,6 +7,7 @@
 #include "ViewportClient.h"
 #include "EditorEngine.h"
 #include "EngineBaseTypes.h"
+#include "Engine/Source/Runtime/Renderer/ShaderManager.h"
 
 #define MIN_ORTHOZOOM				1.0							/* 2D ortho viewport zoom >= MIN_ORTHOZOOM */
 #define MAX_ORTHOZOOM				1e25	
@@ -128,6 +129,7 @@ public:
     ELevelViewportType ViewportType;
     uint64 ShowFlag;
     EViewModeIndex ViewMode;
+    ELightingModel LightingModel = ELightingModel::BlinnPhong;
 
     FMatrix View;
     FMatrix Projection;
@@ -159,7 +161,9 @@ public: //Camera Movement
     void SetViewportType(ELevelViewportType InViewportType);
     void UpdateOrthoCameraLoc();
     EViewModeIndex GetViewMode() { return ViewMode; }
-    void SetViewMode(EViewModeIndex newMode) { ViewMode = newMode; }
+    void SetViewMode(EViewModeIndex newMode);
+    ELightingModel GetLighitingModel() { return LightingModel; }
+    void SetLightingModel(ELightingModel newLighting) { LightingModel = newLighting; }
     uint64 GetShowFlag() { return ShowFlag; }
     void SetShowFlag(uint64 newMode) { ShowFlag = newMode; }
     bool GetIsOnRBMouseClick() { return bRightMouseDown; }
