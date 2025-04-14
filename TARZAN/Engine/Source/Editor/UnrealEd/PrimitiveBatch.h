@@ -29,7 +29,7 @@ public:
     void RenderAABB(const FBoundingBox& localAABB, const FVector& center, const FMatrix& modelMatrix);
     void RenderOBB(const FBoundingBox& localAABB, const FVector& center, const FMatrix& modelMatrix);
 	
-    void AddCone(const FVector& center, float radius, float height, int segments,const FLinearColor& color, const FMatrix& modelMatri);
+    void AddCone(const FVector& Center, float Radius, float Angle, const FLinearColor& Color, const FMatrix& ModelMatrix);
     void AddCircle(const FVector& center, float radius, int segments, const FLinearColor& color, const FMatrix& modelMatrix);
 	
     // 복사 생성자 및 대입 연산자 삭제

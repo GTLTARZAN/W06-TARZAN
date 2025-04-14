@@ -981,7 +981,8 @@ void FRenderer::RenderLight()
             {
                 if (GEngine->GetWorld()->WorldType == EWorldType::PIE) continue;
                 FMatrix Model = JungleMath::CreateModelMatrix(SpotLight->GetWorldLocation(), SpotLight->GetWorldRotation(), { 1, 1, 1 });
-                UPrimitiveBatch::GetInstance().AddCone(SpotLight->GetWorldLocation(), SpotLight->GetRadius() * tan(SpotLight->GetOuterConeAngle() / 2 * 3.14 / 180.0f), SpotLight->GetRadius(), 140, SpotLight->GetColor(), Model);
+                UPrimitiveBatch::GetInstance().AddCone(SpotLight->GetWorldLocation(), SpotLight->GetRadius(), SpotLight->GetOuterConeAngle(), SpotLight->GetColor(), Model);
+                UPrimitiveBatch::GetInstance().AddCone(SpotLight->GetWorldLocation(), SpotLight->GetRadius(), SpotLight->GetInnerConeAngle(), SpotLight->GetColor() / 2, Model);
                 UPrimitiveBatch::GetInstance().RenderOBB(SpotLight->GetBoundingBox(), Light->GetWorldLocation(), Model);
             }
         }
