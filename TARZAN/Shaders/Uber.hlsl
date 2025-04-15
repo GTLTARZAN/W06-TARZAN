@@ -285,16 +285,16 @@ PS_OUT Uber_PS(VS_OUT Input)
     finalColor += CalculateDirectionalLightBlinnPhong(Directional, normalWS, viewDir, albedoColor.xyz);
     
     // PointLight
-    //for (int i = 0; i < NUM_POINT_LIGHT; i++)
-    //{
-    //    finalColor += CalculatePointLightBlinnPhong(PointLights[i], Input.WorldPos, normalWS, viewDir);
-    //}
+    for (int i = 0; i < NUM_POINT_LIGHT; i++)
+    {
+        finalColor += CalculatePointLightBlinnPhong(PointLights[i], Input.WorldPos, normalWS, viewDir);
+    }
     
-    //// SpotLight
-    //for (int j = 0; j < NUM_SPOT_LIGHT; j++)
-    //{
-    //    finalColor += CalculateSpotLightBlinnPhong(SpotLights[j], Input.WorldPos, normalWS, viewDir);
-    //}
+    // SpotLight
+    for (int j = 0; j < NUM_SPOT_LIGHT; j++)
+    {
+        finalColor += CalculateSpotLightBlinnPhong(SpotLights[j], Input.WorldPos, normalWS, viewDir);
+    }
     
     finalPixel = finalColor;
 #elif UNLIT
@@ -320,14 +320,26 @@ float4 CalculateDirectionalLightBlinnPhong(FDirectionalLightInfo info, float3 no
     float diff = saturate(dot(normal, lightDir));
     float3 diffuse = albedo * info.Color.rgb * info.Intensity * diff;
     
-    // Specular
-    //float3 halfDir = normalize(-info.Direction.xyz + viewDir);
-    float3 halfDir = normalize(lightDir + viewDir);
+    float spec = 0.f;
+    if (diff > 0.f)
+    {
+        // Specular
+        float3 halfDir = normalize(lightDir + viewDir);
     
-    // 거리에 따른 감쇠가 없으므로 info.LightFalloffExponent를 통한 제곱을 뺌
-    //float spec = max(dot(normal, halfDir), 0.0f);
-    float spec = max(dot(normal, halfDir), 0);
-    spec = pow(spec, 3);
+        // 거리에 따른 감쇠가 없으므로 info.LightFalloffExponent를 통한 제곱을 뺌
+        //float spec = max(dot(normal, halfDir), 0.0f);
+        spec = max(dot(normal, halfDir), 0);
+        spec = pow(spec, 32);
+        spec *= diff;
+    }
+
+    //// Specular
+    //float3 halfDir = normalize(lightDir + viewDir);
+    
+    //// 거리에 따른 감쇠가 없으므로 info.LightFalloffExponent를 통한 제곱을 뺌
+    ////float spec = max(dot(normal, halfDir), 0.0f);
+    //float spec = max(dot(normal, halfDir), 0);
+    //spec = pow(spec, 3);
 
     float3 specular = info.Color.rgb * Material.SpecularColor * info.Intensity * spec;
     
