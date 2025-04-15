@@ -262,6 +262,7 @@ void AActor::DuplicateSubObjects(const UObject* SourceObj)
     for (UActorComponent* Component : Source->OwnedComponents)
     {
         UActorComponent* dupComponent = static_cast<UActorComponent*>(Component->Duplicate());
+        dupComponent->bHasBeenInitialized = false;
         dupComponent->Owner = this;
         OwnedComponents.Add(dupComponent);
         RootComponent = Cast<USceneComponent>(dupComponent);
