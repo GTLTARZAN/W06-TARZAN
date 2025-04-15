@@ -168,6 +168,7 @@ bool FShaderManager::CreatePixelShader(
         { "LIGHTING_MODEL_GOURAUD", "0" },
         { "LIGHTING_MODEL_LAMBERT", "0" },
         { "LIGHTING_MODEL_PHONG", "0" },
+        { "SHOW_NORMAL", "0" },
         { nullptr, nullptr } // 반드시 마지막은 null로 종료
     };
 
@@ -177,6 +178,7 @@ bool FShaderManager::CreatePixelShader(
         { "LIGHTING_MODEL_GOURAUD", "1" },
         { "LIGHTING_MODEL_LAMBERT", "0" },
         { "LIGHTING_MODEL_PHONG", "0" },
+        { "SHOW_NORMAL", "0" },
         { nullptr, nullptr } // 반드시 마지막은 null로 종료
     };
 
@@ -186,6 +188,7 @@ bool FShaderManager::CreatePixelShader(
         { "LIGHTING_MODEL_GOURAUD", "0" },
         { "LIGHTING_MODEL_LAMBERT", "1" },
         { "LIGHTING_MODEL_PHONG", "0" },
+        { "SHOW_NORMAL", "0" },
         { nullptr, nullptr } // 반드시 마지막은 null로 종료
     };
 
@@ -195,6 +198,17 @@ bool FShaderManager::CreatePixelShader(
         { "LIGHTING_MODEL_GOURAUD", "0" },
         { "LIGHTING_MODEL_LAMBERT", "0" },
         { "LIGHTING_MODEL_PHONG", "1" },
+        { "SHOW_NORMAL", "0" },
+        { nullptr, nullptr } // 반드시 마지막은 null로 종료
+    };
+
+    D3D_SHADER_MACRO defines_Normal[] =
+    {
+        { "UNLIT", "0" },
+        { "LIGHTING_MODEL_GOURAUD", "0" },
+        { "LIGHTING_MODEL_LAMBERT", "0" },
+        { "LIGHTING_MODEL_PHONG", "0" },
+        { "SHOW_NORMAL", "1" },
         { nullptr, nullptr } // 반드시 마지막은 null로 종료
     };
 
@@ -213,6 +227,9 @@ bool FShaderManager::CreatePixelShader(
         break;
     case ELightingModel::BlinnPhong:
         defines_Pixel = defines_BlinnPhong;
+        break;
+    case ELightingModel::Normal:
+        defines_Pixel = defines_Normal;
         break;
     default:
         defines_Pixel = nullptr;

@@ -10,6 +10,7 @@ enum class ELightingModel
     Gouraud,
     Lambert,
     BlinnPhong,
+    Normal, // Lighting Model은 아니지만 Normal을 보여주는 용도
     Unlit,
 };
 

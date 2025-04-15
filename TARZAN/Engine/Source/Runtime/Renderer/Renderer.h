@@ -79,6 +79,9 @@ public:
     // Used by BlinnPhong
     ID3D11PixelShader* BlinnPhongPS[2] = { nullptr, nullptr };
 
+    // Normal PixelShader
+    ID3D11PixelShader* NormalPS[2] = { nullptr, nullptr };
+
     // Unlit PixelShader
     ID3D11PixelShader* UnlitPS[2] = { nullptr, nullptr };
 

@@ -359,13 +359,13 @@ void PropertyEditorPanel::Render()
             // Light Radius
             float radiusVal;
             radiusVal = SpotLightComponent->GetRadius();
-            if (ImGui::SliderFloat("Radius", &radiusVal, 1.0f, 1000.0f))
+            if (ImGui::DragFloat("Radius", &radiusVal, 1.0f, 0.0f, 1000.0f))
             {
                 SpotLightComponent->SetRadius(radiusVal);
             }
 
             float IntensityVal = SpotLightComponent->GetIntensity();
-            if (ImGui::SliderFloat("Intensity", &IntensityVal, 1.0f, 100.0f))
+            if (ImGui::DragFloat("Intensity", &IntensityVal, 0.5f, 0.0f, 100.0f))
             {
                 if (SpotLightComponent)
                 {
@@ -373,12 +373,12 @@ void PropertyEditorPanel::Render()
                 }
             }
 
-            float RadiusFallOffVal = SpotLightComponent->GetLightFalloffExponent();
-            if (ImGui::SliderFloat("RadiusFallOff", &RadiusFallOffVal, 0.0f, 10.0f))
+            float LightFalloffExponentVal = SpotLightComponent->GetLightFalloffExponent();
+            if (ImGui::DragFloat("LightFalloffExponent", &LightFalloffExponentVal, 0.1f, 0.0f, 10.0f))
             {
                 if (SpotLightComponent)
                 {
-                    SpotLightComponent->SetLightFalloffExponent(RadiusFallOffVal);
+                    SpotLightComponent->SetLightFalloffExponent(LightFalloffExponentVal);
                 }
             }
 
@@ -387,7 +387,7 @@ void PropertyEditorPanel::Render()
             float prevInner = InnerConeAngle;
             float prevOuter = OuterConeAngle;
 
-            if (ImGui::SliderFloat("InnerConeAngle", &InnerConeAngle, 0.0f, 80.0f))
+            if (ImGui::DragFloat("InnerConeAngle", &InnerConeAngle, 0.5f, 0.0f, 80.0f))
             {
                 if (InnerConeAngle > OuterConeAngle)
                 {
@@ -398,7 +398,7 @@ void PropertyEditorPanel::Render()
                 SpotLightComponent->SetOuterConeAngle(OuterConeAngle);
             }
 
-            if (ImGui::SliderFloat("OuterConeAngle", &OuterConeAngle, 0.0f, 80.0f))
+            if (ImGui::DragFloat("OuterConeAngle", &OuterConeAngle, 0.5f, 0.0f, 80.0f))
             {
                 if (OuterConeAngle < InnerConeAngle)
                 {
@@ -487,31 +487,31 @@ void PropertyEditorPanel::Render()
             // Light Radius
             float FogDensity;
             FogDensity = FogObj->GetFogDensity();
-            if (ImGui::SliderFloat("Density", &FogDensity, 0.0f, 1.0f))
+            if (ImGui::DragFloat("Density", &FogDensity, 1.0f, 0.0f, 1.0f))
             {
                 FogObj->SetFogDensity(FogDensity);
             }
             float FogHeightFalloff;
             FogHeightFalloff = FogObj->GetFogHeightFalloff();
-            if (ImGui::SliderFloat("HeightFalloff", &FogHeightFalloff, 0.0f, 0.1f))
+            if (ImGui::DragFloat("HeightFalloff", &FogHeightFalloff, 1.0f, 0.0f, 0.1f))
             {
                 FogObj->SetFogHeightFalloff(FogHeightFalloff);
             }
             float StartDistance;
             StartDistance = FogObj->GetStartDistance();
-            if (ImGui::SliderFloat("StartDistance", &StartDistance, 0.0f, 1000.0f))
+            if (ImGui::DragFloat("StartDistance", &StartDistance, 1.0f, 0.0f, 1000.0f))
             {
                 FogObj->SetStartDistance(StartDistance);
             }
             float FogCutoffDistance;
             FogCutoffDistance = FogObj->GetFogCutoffDistance();
-            if (ImGui::SliderFloat("FogCutoffDistance", &FogCutoffDistance, 0.0f, 1000.0f))
+            if (ImGui::DragFloat("FogCutoffDistance", &FogCutoffDistance, 1.0f, 0.0f, 1000.0f))
             {
                 FogObj->SetFogCutoffDistance(FogCutoffDistance);
             }
             float GetMaxOpacity;
             GetMaxOpacity = FogObj->GetFogMaxOpacity();
-            if (ImGui::SliderFloat("MaxOpacity", &GetMaxOpacity, 0.0f, 1.0f))
+            if (ImGui::DragFloat("MaxOpacity", &GetMaxOpacity, 1.0f, 0.0f, 1.0f))
             {
                 FogObj->SetFogMaxOpacity(GetMaxOpacity);
             }

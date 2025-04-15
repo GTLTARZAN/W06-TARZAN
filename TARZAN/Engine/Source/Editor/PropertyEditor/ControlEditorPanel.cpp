@@ -501,7 +501,7 @@ void ControlEditorPanel::CreateFlagButton() const
 
     ImGui::SameLine();
 
-    const char* ShadeModeNames[] = { "Gouraud", "Lambert", "Blinn-Phong" };
+    const char* ShadeModeNames[] = { "Gouraud", "Lambert", "Blinn-Phong", "Normal"};
     if (ActiveViewport->GetViewMode() == EViewModeIndex::VMI_Lit)
     {
         // Lit을 선택했을 때만 Shade를 선택할 수 있도록
