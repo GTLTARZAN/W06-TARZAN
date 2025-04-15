@@ -47,12 +47,12 @@ struct FSpotLightInfo
 struct FMaterialInfo
 {
     float3 DiffuseColor;
-    float3 AmbientColor;
-    float3 SpecularColor;
-    float3 EmmisiveColor;
     float TransparencyScalar;
+    float3 AmbientColor;
     float DensityScalar;
+    float3 SpecularColor;
     float SpecularScalar;
+    float3 EmmisiveColor;
     float MaterialPad0;
 };
 
@@ -357,7 +357,7 @@ float4 CalculateSpotLightBlinnPhong(FSpotLightInfo info, float3 worldPos, float3
     
     float3 halfDir = normalize(lightDir + viewDir);
     // TODO: 32 값은 Roughness 값으로 변수화 필요
-    float spec = pow(max(dot(normal, halfDir), 0.0f), 32);
+    float spec = pow(max(dot(normal, halfDir), 0.0f), Material.SpecularScalar);
     float4 specular = info.Color * info.Intensity * attenuation * spec;
     
     float3 spotDir = normalize(-info.Direction.xyz);
