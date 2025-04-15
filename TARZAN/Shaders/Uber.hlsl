@@ -110,11 +110,14 @@ float4 CalculatePointLight(FPointLightInfo info, float3 worldPos, float3 normal,
         return float4(0.0f, 0.0f, 0.0f, 0.0f);
         
     lightDir = normalize(lightDir);
-    
-    // 거리에 따른 감쇠 계산 (Radius를 기준으로 정규화)
-    float normalizedDistance = distance / info.AttenuationRadius;
-    float attenuation = 1.0f / (1.0f + info.LightFalloffExponent * normalizedDistance * normalizedDistance);
+
     float NdotL = max(0.0f, dot(normal, lightDir));
+    
+    // 거리에 따른 감쇠 계산 (역제곱 법칙 적용)
+    float normalizedDistance = distance / info.AttenuationRadius;
+    float attenuation = 1.0f / (1.0f + normalizedDistance * normalizedDistance);
+    attenuation = (attenuation - 0.5f) * 2.0f;
+    attenuation = pow(attenuation, info.LightFalloffExponent);
     
     return info.Color * info.Intensity * NdotL * attenuation;
 }
@@ -132,14 +135,18 @@ float4 CalculateSpotLight(FSpotLightInfo info, float3 worldPos, float3 normal, f
         
     lightDir = normalize(lightDir);
     
-    // 거리에 따른 감쇠 계산 (Radius를 기준으로 정규화)
-    float normalizedDistance = distance / info.AttenuationRadius;
-    float attenuation = 1.0f / (1.0f + info.LightFalloffExponent * normalizedDistance * normalizedDistance);
     float NdotL = max(0.0f, dot(normal, lightDir));
-    
+
+    // 거리에 따른 감쇠 계산 (역제곱 법칙 적용)
+    float normalizedDistance = distance / info.AttenuationRadius;
+    float attenuation = 1.0f / (1.0f + normalizedDistance * normalizedDistance);
+    attenuation = (attenuation - 0.5f) * 2.0f;
+    attenuation = pow(attenuation, info.LightFalloffExponent);
+    attenuation = max(0.0f, attenuation);  // 음수가 되지 않도록 보장
+
     float3 spotDir = normalize(-info.Direction.xyz);
     float spotFactor = dot(lightDir, spotDir);
-    float spotLightFactor = smoothstep(cos(info.OuterConeAngle), cos(info.InnerConeAngle), spotFactor);
+    float spotLightFactor = smoothstep(cos(radians(info.OuterConeAngle)), cos(radians(info.InnerConeAngle)), spotFactor);
     
     return info.Color * info.Intensity * NdotL * attenuation * spotLightFactor;
 }
@@ -351,7 +358,10 @@ float4 CalculateSpotLightBlinnPhong(FSpotLightInfo info, float3 worldPos, float3
     
     // 거리에 따른 감쇠 계산 (Radius를 기준으로 정규화)
     float normalizedDistance = distance / info.AttenuationRadius;
-    float attenuation = 1.0f / (1.0f + info.LightFalloffExponent * normalizedDistance * normalizedDistance);
+    float attenuation = 1.0f / (1.0f + normalizedDistance * normalizedDistance);
+    attenuation = (attenuation - 0.5f) * 2.0f;
+    attenuation = pow(attenuation, info.LightFalloffExponent);  // LightFalloffExponent만큼 pow 적용
+    attenuation = max(0.0f, attenuation);  // 음수가 되지 않도록 보장
     float diff = max(0.0f, dot(normal, lightDir));
     float4 diffuse = info.Color * info.Intensity * attenuation * diff;
     
