@@ -35,8 +35,8 @@ struct FSpotLightInfo
 {
     float4 Color;
     float3 Position;
-    float3 Direction;
     float Intensity;
+    float3 Direction;
     float AttenuationRadius;
     float LightFalloffExponent;
     float InnerConeAngle;
@@ -344,7 +344,7 @@ float4 CalculateSpotLightBlinnPhong(FSpotLightInfo info, float3 worldPos, float3
     float3 lightDir = info.Position.xyz - worldPos;
     float distance = length(lightDir);
     // 거리가 Radius를 초과하면 빛의 영향을 주지 않음
-    if (distance > info.AttenuationRadius)
+    if (distance > info.AttenuationRadius * 3.0f)
         return float4(0.0f, 0.0f, 0.0f, 0.0f);
     
     lightDir = normalize(lightDir);
@@ -362,8 +362,9 @@ float4 CalculateSpotLightBlinnPhong(FSpotLightInfo info, float3 worldPos, float3
     
     float3 spotDir = normalize(-info.Direction.xyz);
     float spotFactor = dot(lightDir, spotDir);
-    float spotLightFactor = smoothstep(cos(info.OuterConeAngle), cos(info.InnerConeAngle), spotFactor);
     
+    float spotLightFactor = smoothstep(cos(radians(info.OuterConeAngle)), cos(radians(info.InnerConeAngle)), spotFactor);
+
     return info.Color * info.Intensity * attenuation * spotLightFactor * (diff + spec);
 }
 
