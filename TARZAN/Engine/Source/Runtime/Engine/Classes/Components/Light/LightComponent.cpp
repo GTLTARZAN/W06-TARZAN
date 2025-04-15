@@ -4,6 +4,8 @@
 #include "Renderer/Renderer.h"
 #include "Math/Vector.h"
 #include "Math/Matrix.h"
+//#include "Engine/Source/Runtime/Engine/Classes/Components/ActorComponent.h"
+#include "GameFramework/Actor.h"
 
 ULightComponentBase::ULightComponentBase()
     : Intensity(1.0f)
@@ -66,6 +68,8 @@ bool ULightComponentBase::IsVisible() const
 // UAmbientLightComponent
 UAmbientLightComponent::UAmbientLightComponent()
 {
+    FLinearColor AmbientColor = FLinearColor(0.1, 0.1, 0.1, 1);
+    SetColor(AmbientColor);
 }
 
 UAmbientLightComponent::~UAmbientLightComponent()
@@ -74,14 +78,13 @@ UAmbientLightComponent::~UAmbientLightComponent()
 
 void UAmbientLightComponent::InitializeComponent()
 {
-    FLinearColor AmbientColor = FLinearColor(0.1, 0.1, 0.1, 1);
-    SetColor(AmbientColor);
 }
 
 // UDirectionalLightComponent
 UDirectionalLightComponent::UDirectionalLightComponent()
-    : Direction(FVector(1, -1, -1))
 {
+    SetRotation(FVector(0.f, 45.f, 0.f));
+    Direction = GetForwardVector();
 }
 
 UDirectionalLightComponent::~UDirectionalLightComponent()
@@ -90,13 +93,7 @@ UDirectionalLightComponent::~UDirectionalLightComponent()
 
 void UDirectionalLightComponent::InitializeComponent()
 {
-    SetColor(FLinearColor::White());
-
-    Texture2D = new UBillboardComponent();
-    Texture2D->SetTexture(L"Engine/Icon/DirectionalLight_64x.png");
-    Texture2D->InitializeComponent();
 }
-
 
 // UPointLightComponent
 UPointLightComponent::UPointLightComponent()
@@ -123,6 +120,7 @@ UPointLightComponent::~UPointLightComponent()
 
 void UPointLightComponent::InitializeComponent()
 {
+
 }
 
 void UPointLightComponent::SetRadius(float InRadius)

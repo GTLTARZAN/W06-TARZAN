@@ -356,7 +356,6 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
                     SpawnedActor->SetActorLabel(TEXT("OBJ_SpotLight"));
                     SpawnedActor->AddComponent<USpotLightComponent>();
                     UBillboardComponent* BillboardComponent = SpawnedActor->AddComponent<UBillboardComponent>();
-                    //BillboardComponent->SetTexture(L"Assets/Texture/SpotLight_64x.png");
                     BillboardComponent->SetTexture(L"Engine/Icon/SpotLight_64x.png");
                     break;
                 }
@@ -366,7 +365,6 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
                     SpawnedActor->SetActorLabel(TEXT("OBJ_PointLight"));
                     SpawnedActor->AddComponent<UPointLightComponent>();
                     UBillboardComponent* BillboardComponent = SpawnedActor->AddComponent<UBillboardComponent>();
-                    //BillboardComponent->SetTexture(L"Assets/Texture/PointLight_64x.png");
                     BillboardComponent->SetTexture(L"Engine/Icon/PointLight_64x.png");
                     break;
                 }
@@ -374,11 +372,10 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
                 {
                     SpawnedActor = World->SpawnActor<AActor>();
                     SpawnedActor->SetActorLabel(TEXT("OBJ_DirectionalLight"));
-                    UDirectionalLightComponent* LightComp = SpawnedActor->AddComponent<UDirectionalLightComponent>();
-                    //SpawnedActor->AddComponent<UBillboardComponent>(LightComp->GetTexture2D());
-                    //UBillboardComponent* BillboardComponent = SpawnedActor->AddComponent<UBillboardComponent>();
-                    //BillboardComponent->SetTexture(L"Assets/Texture/DirectionalLight_64x.png");
-                    //BillboardComponent->SetTexture(L"Engine/Icon/DirectionalLight_64x.png");
+                    SpawnedActor->AddComponent<UDirectionalLightComponent>();
+                    UBillboardComponent* BillboardComponent = SpawnedActor->AddComponent<UBillboardComponent>();
+                    BillboardComponent->SetTexture(L"Engine/Icon/DirectionalLight_64x.png");
+                    SpawnedActor->AddComponent<UAmbientLightComponent>();
                     break;
                 }
                 case OBJ_Particle:

@@ -1,8 +1,12 @@
-﻿#include "Level.h"
+#include "Level.h"
 #include "GameFramework/Actor.h"
+#include "Components/Light/LightComponent.h"
+#include "Components/UBillboardComponent.h"
+#include "Engine/Classes/Engine/World.h"
 
 ULevel::ULevel()
 {
+    //SpawnDefaultActors();
 }
 
 ULevel::~ULevel()
@@ -30,4 +34,17 @@ void ULevel::DuplicateSubObjects(const UObject* SourceObj)
 void ULevel::PostDuplicate()
 {
     UObject::PostDuplicate();
+}
+
+void ULevel::SpawnDefaultActors()
+{
+    AActor* DefaultLight = OwnerWorld->SpawnActor<AActor>();
+    DefaultLight->SetActorLabel(TEXT("DirectionalLight"));
+
+    DefaultLight->AddComponent<UDirectionalLightComponent>();
+    DefaultLight->AddComponent<UAmbientLightComponent>();
+    UBillboardComponent* BillboardComponent = DefaultLight->AddComponent<UBillboardComponent>();
+    BillboardComponent->SetTexture(L"Engine/Icon/DirectionalLight_64x.png");
+
+    DefaultLight->SetActorLocation(FVector(0, 0, 10));
 }

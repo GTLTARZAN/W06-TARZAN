@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Container/Set.h"
 #include "UObject/Object.h"
 #include "UObject/ObjectMacros.h"
@@ -22,10 +22,16 @@ public:
         Actors.Empty();
 }
 
+public:
+    UWorld* OwnerWorld;
+
 private:
     TSet<AActor*> Actors;
 
 public:
     TSet<AActor*>& GetActors() { return Actors; }
     TArray<AActor*> PendingBeginPlayActors;
+
+    void SpawnDefaultActors();
+private:
 };

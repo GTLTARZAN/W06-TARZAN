@@ -62,6 +62,7 @@ private:
     AActor* SelectedActor = nullptr;
     USceneComponent* pickingGizmo = nullptr;
     AEditorPlayer* EditorPlayer = nullptr;
+    AActor* DefaultLight = nullptr;
 public:
     EWorldType::Type WorldType = EWorldType::None;
     const TSet<AActor*>& GetActors() const { return Level->GetActors(); }

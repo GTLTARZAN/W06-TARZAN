@@ -40,8 +40,8 @@ int32 UEditorEngine::Init(HWND hwnd)
     EditorContext.WorldType = EWorldType::Editor;
     EditorContext.thisCurrentWorld = FObjectFactory::ConstructObject<UWorld>(nullptr);
     UWorld* EditWorld = EditorContext.thisCurrentWorld;
-    EditWorld->InitWorld();
     EditWorld->WorldType = EWorldType::Editor;
+    EditWorld->InitWorld();
     GWorld = EditWorld;
     worldContexts.Add(EditorContext);
     

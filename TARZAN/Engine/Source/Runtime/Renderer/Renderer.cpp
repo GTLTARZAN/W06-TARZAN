@@ -324,6 +324,7 @@ void FRenderer::PrepareUberShader() const
         Graphics->DeviceContext->VSSetConstantBuffers(2, 1, &LightConstantBuffer);
         Graphics->DeviceContext->VSSetConstantBuffers(3, 1, &MaterialConstantBuffer);
 
+        Graphics->DeviceContext->PSSetConstantBuffers(1, 1, &CameraConstantBuffer);
         Graphics->DeviceContext->PSSetConstantBuffers(2, 1, &LightConstantBuffer);
         Graphics->DeviceContext->PSSetConstantBuffers(3, 1, &MaterialConstantBuffer);
     }
@@ -717,12 +718,15 @@ void FRenderer::RenderStaticMeshes()
             StaticMeshComp->GetWorldRotation(),
             StaticMeshComp->GetWorldScale()
         );
+
+        
         
         FObjectMatrixConstants MatrixConstant =
         {
             .World = Model,
             .View = ActiveViewport->GetViewMatrix(),
-            .Projection = ActiveViewport->GetProjectionMatrix()
+            .Projection = ActiveViewport->GetProjectionMatrix(),
+            .NormalMatrix = FMatrix::Transpose(FMatrix::Inverse(Model))
         };
         ConstantBufferUpdater.UpdateObjectMatrixConstants(ObjectMatrixConstantBuffer, MatrixConstant);
 
@@ -732,26 +736,34 @@ void FRenderer::RenderStaticMeshes()
         };
         ConstantBufferUpdater.UpdateCameraPositionConstants(CameraConstantBuffer, CameraConstant);
 
-        FAmbientLightInfo Ambient =
-        {
-            .Color = FLinearColor(0.1f, 0.1f, 0.1f, 1.f),
-            .Intensity = 1
-        };
-
-        FDirectionalLightInfo DirectionalLight =
-        {
-            .Color = FLinearColor(1.f, 1.f, 1.f, 1.f),
-            .Direction = FVector(1, -1, -1),
-            .Intensity = 1
-        };
-
         // Point Light
+        FAmbientLightInfo Ambient;
+        FDirectionalLightInfo DirectionalLight;
         std::unique_ptr<FPointLightArrayInfo> PointLightArrayInfo = std::make_unique<FPointLightArrayInfo>();
         std::unique_ptr<FSpotLightArrayInfo> SpotLightArrayInfo = std::make_unique<FSpotLightArrayInfo>();
         if (LightObjs.Num() > 0)
         {
             for (int i = 0; i < LightObjs.Num(); i++) 
             {
+                if (LightObjs[i]->IsA<UAmbientLightComponent>())
+                {
+                    if (UAmbientLightComponent* AmbientLight = Cast<UAmbientLightComponent>(LightObjs[i]))
+                    {
+                        Ambient.Color = AmbientLight->GetColor();
+                        Ambient.Intensity = AmbientLight->GetIntensity();
+                    }
+                }
+
+                if (LightObjs[i]->IsA<UDirectionalLightComponent>())
+                {
+                    if (UDirectionalLightComponent* Light = Cast<UDirectionalLightComponent>(LightObjs[i]))
+                    {
+                        DirectionalLight.Color = Light->GetColor();
+                        DirectionalLight.Intensity = Light->GetIntensity();
+                        DirectionalLight.Direction = Light->GetDirection();
+                    }
+                }
+
                 if (LightObjs[i]->IsA<USpotLightComponent>())
                 {
                     if (USpotLightComponent* SpotLight = Cast<USpotLightComponent>(LightObjs[i]))

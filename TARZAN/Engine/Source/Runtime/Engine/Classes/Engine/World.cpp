@@ -11,6 +11,8 @@
 #include "UnrealEd/SceneMgr.h"
 #include "UObject/UObjectIterator.h"
 #include "Level.h"
+#include "Components/Light/LightComponent.h"
+#include "Components/UBillboardComponent.h"
 
 
 UWorld::UWorld(const UWorld& Other): UObject(Other)
@@ -26,6 +28,8 @@ void UWorld::InitWorld()
     // TODO: Load Scene
     CreateBaseObject();
     Level = FObjectFactory::ConstructObject<ULevel>(this);
+    Level->OwnerWorld = this;
+    Level->SpawnDefaultActors();
 }
 
 void UWorld::CreateBaseObject()

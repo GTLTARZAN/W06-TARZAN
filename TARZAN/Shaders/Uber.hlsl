@@ -62,6 +62,7 @@ cbuffer ObjectMatrixConstant : register(b0)
     row_major float4x4 World;
     row_major float4x4 View;
     row_major float4x4 Projection;
+    row_major float4x4 WorldInverseTranspose;
 };
 
 cbuffer CameraConstant : register(b1)
@@ -186,7 +187,7 @@ VS_OUT Uber_VS(VS_IN Input)
     float4 worldPos = mul(float4(Input.Position, 1.0f), World);
     output.Position = mul(worldPos, mul(View, Projection));
     output.WorldPos = worldPos.xyz;
-    output.Normal = normalize(mul(Input.Normal, (float3x3)World));
+    output.Normal = normalize(mul(Input.Normal, (float3x3) WorldInverseTranspose));
     output.TexCoord = Input.TexCoord;
     output.Tangent = Input.Tangent;
     
@@ -284,16 +285,16 @@ PS_OUT Uber_PS(VS_OUT Input)
     finalColor += CalculateDirectionalLightBlinnPhong(Directional, normalWS, viewDir, albedoColor.xyz);
     
     // PointLight
-    for (int i = 0; i < NUM_POINT_LIGHT; i++)
-    {
-        finalColor += CalculatePointLightBlinnPhong(PointLights[i], Input.WorldPos, normalWS, viewDir);
-    }
+    //for (int i = 0; i < NUM_POINT_LIGHT; i++)
+    //{
+    //    finalColor += CalculatePointLightBlinnPhong(PointLights[i], Input.WorldPos, normalWS, viewDir);
+    //}
     
-    // SpotLight
-    for (int j = 0; j < NUM_SPOT_LIGHT; j++)
-    {
-        finalColor += CalculateSpotLightBlinnPhong(SpotLights[j], Input.WorldPos, normalWS, viewDir);
-    }
+    //// SpotLight
+    //for (int j = 0; j < NUM_SPOT_LIGHT; j++)
+    //{
+    //    finalColor += CalculateSpotLightBlinnPhong(SpotLights[j], Input.WorldPos, normalWS, viewDir);
+    //}
     
     finalPixel = finalColor;
 #elif UNLIT
@@ -313,17 +314,22 @@ PS_OUT Uber_PS(VS_OUT Input)
 
 float4 CalculateDirectionalLightBlinnPhong(FDirectionalLightInfo info, float3 normal, float3 viewDir, float3 albedo)
 {
+    float3 lightDir = -info.Direction.xyz;
     // Diffuse
-    float diff = max(dot(normal, -info.Direction.xyz), 0.0f);
+    //float diff = max(dot(normal, -info.Direction.xyz), 0.0f);
+    float diff = saturate(dot(normal, lightDir));
+    float3 diffuse = albedo * info.Color.rgb * info.Intensity * diff;
     
     // Specular
-    float3 halfDir = normalize(-info.Direction.xyz + viewDir);
+    //float3 halfDir = normalize(-info.Direction.xyz + viewDir);
+    float3 halfDir = normalize(lightDir + viewDir);
     
     // 거리에 따른 감쇠가 없으므로 info.LightFalloffExponent를 통한 제곱을 뺌
-    float spec = max(dot(normal, halfDir), 0.0f);
+    //float spec = max(dot(normal, halfDir), 0.0f);
+    float spec = max(dot(normal, halfDir), 0);
+    spec = pow(spec, 3);
 
-    float3 diffuse = albedo * info.Color.rgb * info.Intensity * diff;
-    float3 specular = info.Color.rgb * info.Intensity * spec;
+    float3 specular = info.Color.rgb * Material.SpecularColor * info.Intensity * spec;
     
     return float4(diffuse + specular, 1.f);
 }

@@ -338,6 +338,7 @@ struct FObjectMatrixConstants
     FMatrix World;
     FMatrix View;
     FMatrix Projection;
+    FMatrix NormalMatrix;
 };
 
 struct FCameraConstant 

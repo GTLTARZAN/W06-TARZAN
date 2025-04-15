@@ -67,6 +67,7 @@ public:
     virtual ~UDirectionalLightComponent() override;
 
     virtual void InitializeComponent() override;
+    FVector GetDirection() { return GetForwardVector(); }
 
 protected:
     FVector Direction;

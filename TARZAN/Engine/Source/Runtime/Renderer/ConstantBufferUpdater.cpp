@@ -217,6 +217,7 @@ void FConstantBufferUpdater::UpdateObjectMatrixConstants(ID3D11Buffer* ObjectMat
         constants->World = ObjectMatrix.World;
         constants->View = ObjectMatrix.View;
         constants->Projection = ObjectMatrix.Projection;
+        constants->NormalMatrix = ObjectMatrix.NormalMatrix;
         DeviceContext->Unmap(ObjectMatrixConstantBuffer, 0);
     }
 }
