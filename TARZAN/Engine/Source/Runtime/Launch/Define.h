@@ -374,8 +374,8 @@ struct FSpotLightInfo
 {
     FLinearColor Color;
     FVector Position;
-    FVector Direction;
     float Intensity;
+    FVector Direction;
     float AttenuationRadius;
     float LightFalloffExponent;
     float InnerConeAngle;
