@@ -11,9 +11,6 @@ ULightComponentBase::ULightComponentBase()
     , bVisible(true)
     , Texture2D(nullptr)
 {
-    // FString name = "SpotLight";
-    // SetName(name);
-    InitializeLight();
 }
 
 ULightComponentBase::~ULightComponentBase()
@@ -36,7 +33,6 @@ void ULightComponentBase::InitializeLight()
     Texture2D = new UBillboardComponent();
     Texture2D->SetTexture(L"Assets/Texture/spotLight.png");
     Texture2D->InitializeComponent();
-    LightColor = { 1,1,1,1 };
 }
 
 void ULightComponentBase::TickComponent(float DeltaTime)
@@ -67,15 +63,6 @@ bool ULightComponentBase::IsVisible() const
     return bVisible;
 }
 
-// ULightComponent
-ULightComponent::ULightComponent()
-{
-}
-
-ULightComponent::~ULightComponent()
-{
-}
-
 // UAmbientLightComponent
 UAmbientLightComponent::UAmbientLightComponent()
 {
@@ -85,14 +72,31 @@ UAmbientLightComponent::~UAmbientLightComponent()
 {
 }
 
+void UAmbientLightComponent::InitializeComponent()
+{
+    FLinearColor AmbientColor = FLinearColor(0.1, 0.1, 0.1, 1);
+    SetColor(AmbientColor);
+}
+
 // UDirectionalLightComponent
 UDirectionalLightComponent::UDirectionalLightComponent()
+    : Direction(FVector(1, -1, -1))
 {
 }
 
 UDirectionalLightComponent::~UDirectionalLightComponent()
 {
 }
+
+void UDirectionalLightComponent::InitializeComponent()
+{
+    SetColor(FLinearColor::White());
+
+    Texture2D = new UBillboardComponent();
+    Texture2D->SetTexture(L"Engine/Icon/DirectionalLight_64x.png");
+    Texture2D->InitializeComponent();
+}
+
 
 // UPointLightComponent
 UPointLightComponent::UPointLightComponent()
@@ -119,7 +123,7 @@ UPointLightComponent::~UPointLightComponent()
 
 void UPointLightComponent::SetRadius(float InRadius)
 {
-    Radius = Radius;
+    Radius = InRadius;
 }
 
 float UPointLightComponent::GetRadius() const

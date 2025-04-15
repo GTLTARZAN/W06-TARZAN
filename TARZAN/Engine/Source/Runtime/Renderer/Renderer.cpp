@@ -732,6 +732,7 @@ void FRenderer::RenderStaticMeshes()
             .Direction = FVector(1, -1, -1),
             .Intensity = 1
         };
+
         // Point Light
         std::unique_ptr<FPointLightArrayInfo> PointLightArrayInfo = std::make_unique<FPointLightArrayInfo>();
         std::unique_ptr<FSpotLightArrayInfo> SpotLightArrayInfo = std::make_unique<FSpotLightArrayInfo>();

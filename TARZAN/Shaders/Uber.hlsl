@@ -4,6 +4,7 @@
 #define NUM_SPOT_LIGHT 4
 
 //#define UNLIT 1
+#define LIGHTING_MODEL_GOURAUD 1
 //#define LIGHTING_MODEL_LAMBERT 1
 //#define LIGHTING_MODEL_PHONG 1
 
@@ -247,7 +248,7 @@ PS_OUT Uber_PS(VS_OUT Input)
     
 #if LIGHTING_MODEL_GOURAUD
     
-    finalPixel = Input.Color;
+    finalPixel = Input.Color * albedoColor;
 #elif LIGHTING_MODEL_LAMBERT
     float3 viewDir = normalize(Input.WorldPos - CameraWorldPos);
     // AmbientLight

@@ -12,13 +12,15 @@ public:
     virtual ~ULightComponentBase() override;
 
     virtual void TickComponent(float DeltaTime) override;
-    void InitializeLight();
+    virtual void InitializeLight();
     void SetColor(FLinearColor InColor);
     FLinearColor GetColor() const;
     void SetIntensity(float InIntensity);
     float GetIntensity() const;
     void SetVisible(bool bVisible);
     bool IsVisible() const;
+
+    virtual void InitializeComponent() {};
 
 protected:
     float Intensity;
@@ -36,9 +38,13 @@ class ULightComponent : public ULightComponentBase
     DECLARE_CLASS(ULightComponent, ULightComponentBase)
 
 public:
-    ULightComponent();
-    virtual ~ULightComponent() override;
+    ULightComponent() {};
+    virtual ~ULightComponent() override {};
+
+    virtual void InitializeComponent() override {};
 };
+
+/*********************** Light Component *****************************/
 
 class UAmbientLightComponent : public ULightComponent
 {
@@ -47,7 +53,10 @@ class UAmbientLightComponent : public ULightComponent
 public:
     UAmbientLightComponent();
     virtual ~UAmbientLightComponent() override;
+
+    virtual void InitializeComponent() override;
 };
+
 
 class UDirectionalLightComponent : public ULightComponent
 {
@@ -57,9 +66,14 @@ public:
     UDirectionalLightComponent();
     virtual ~UDirectionalLightComponent() override;
 
+private:
+    virtual void InitializeComponent() override;
+
 protected:
     FVector Direction;
 };
+
+
 
 // @todo 파일 분리하기
 class UPointLightComponent : public ULightComponent 
@@ -71,11 +85,12 @@ public:
     UPointLightComponent(const UPointLightComponent& Other);
     virtual ~UPointLightComponent() override;
 
+    virtual void InitializeComponent() override;
+
     void SetRadius(float InRadius);
     float GetRadius() const;
     void SetLightFalloffExponent(float Exponent);
     float GetLightFalloffExponent() const;
-
 
 protected:
     float Radius;

@@ -3,21 +3,22 @@
 
 enum OBJECTS
 {
-	OBJ_SPHERE,
-	OBJ_CUBE,
-	OBJ_Cylinder,
-	OBJ_Cone,
-	OBJ_Torus,
-	OBJ_Plane,
-	OBJ_SpotLight,
-	OBJ_StaticMesh,
-	OBJ_PARTICLE,
-	OBJ_Text,
+	OBJ_StaticMesh,        // UI
+	OBJ_CUBE,              // UI
+	OBJ_SPHERE,            // UI
+	OBJ_Cylinder,          // UI
+	OBJ_Plane,             // UI
+	OBJ_Cone,              // UI
+	OBJ_Torus,             // UI
+	OBJ_SpotLight,         // UI
+    OBJ_PointLight,        // UI
+    OBJ_DirectionalLight,  // UI
+	OBJ_Particle,          // UI
+	OBJ_Text,              // UI
+    OBJ_Fog,               // UI
 	OBJ_TRIANGLE,
 	OBJ_CAMERA,
 	OBJ_PLAYER,
-    OBJ_Fireball,
-    OBJ_Fog,
 	OBJ_END
 };
 enum ARROW_DIR

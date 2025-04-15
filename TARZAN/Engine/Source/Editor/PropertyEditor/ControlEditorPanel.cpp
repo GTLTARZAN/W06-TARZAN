@@ -26,7 +26,7 @@ void ControlEditorPanel::Render()
     ImGuiIO& io = ImGui::GetIO();
     ImFont* IconFont = io.Fonts->Fonts[FEATHER_FONT];
     ImVec2 IconSize = ImVec2(32, 32);
-    
+
     float PanelWidth = (Width) * 0.8f;
     float PanelHeight = 45.0f;
 
@@ -35,10 +35,10 @@ void ControlEditorPanel::Render()
 
     ImVec2 MinSize(300, 50);
     ImVec2 MaxSize(FLT_MAX, 50);
-    
+
     /* Min, Max Size */
     ImGui::SetNextWindowSizeConstraints(MinSize, MaxSize);
-    
+
     /* Panel Position */
     ImGui::SetNextWindowPos(ImVec2(PanelPosX, PanelPosY), ImGuiCond_Always);
 
@@ -47,16 +47,16 @@ void ControlEditorPanel::Render()
 
     /* Panel Flags */
     ImGuiWindowFlags PanelFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground;
-    
+
     /* Render Start */
     ImGui::Begin("Control Panel", nullptr, PanelFlags);
-    
+
     CreateMenuButton(IconSize, IconFont);
-    
+
     ImGui::SameLine();
-    
+
     CreateFlagButton();
-    
+
     ImGui::SameLine();
 
     CreateModifyButton(IconSize, IconFont);
@@ -75,11 +75,11 @@ void ControlEditorPanel::Render()
 
     /* Move Cursor X Position */
     ImGui::SetCursorPosX(ContentWidth - (IconSize.x * 3.0f + 16.0f));
-    
+
     ImGui::PushFont(IconFont);
     CreateSRTButton(IconSize);
     ImGui::PopFont();
-    
+
     ImGui::End();
 }
 
@@ -91,26 +91,26 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
         bOpenMenu = !bOpenMenu;
     }
     ImGui::PopFont();
-    
+
     if (bOpenMenu)
     {
         //std::unique_ptr<FSceneMgr> SceneMgr = std::make_unique<FSceneMgr>();
-        FSceneMgr* SceneMgr=GEngine->GetSceneManager();
+        FSceneMgr* SceneMgr = GEngine->GetSceneManager();
         ImGui::SetNextWindowPos(ImVec2(10, 55), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(135, 170), ImGuiCond_Always);
-        
+
         ImGui::Begin("Menu", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-        
+
         if (ImGui::MenuItem("New Scene"))
         {
-             GEngine->GetWorld()->NewScene();
+            GEngine->GetWorld()->NewScene();
             // TODO: New Scene
         }
 
         if (ImGui::MenuItem("Load Scene"))
         {
-            char const * lFilterPatterns[1]={"*.scene"};
-            const char* FileName =  tinyfd_openFileDialog("Open Scene File", "", 1, lFilterPatterns,"Scene(.scene) file", 0);
+            char const* lFilterPatterns[1] = { "*.scene" };
+            const char* FileName = tinyfd_openFileDialog("Open Scene File", "", 1, lFilterPatterns, "Scene(.scene) file", 0);
 
             if (FileName == nullptr)
             {
@@ -122,11 +122,11 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
         }
 
         ImGui::Separator();
-        
+
         if (ImGui::MenuItem("Save Scene"))
         {
-            char const * lFilterPatterns[1]={"*.scene"};
-            const char* FileName =  tinyfd_saveFileDialog("Save Scene File", "", 1, lFilterPatterns,"Scene(.scene) file");
+            char const* lFilterPatterns[1] = { "*.scene" };
+            const char* FileName = tinyfd_saveFileDialog("Save Scene File", "", 1, lFilterPatterns, "Scene(.scene) file");
 
             if (FileName == nullptr)
             {
@@ -138,17 +138,17 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
 
             tinyfd_messageBox("알림",
 
-            "저장되었습니다.", "ok", "info", 1);
+                "저장되었습니다.", "ok", "info", 1);
         }
 
         ImGui::Separator();
-        
+
         if (ImGui::BeginMenu("Import"))
         {
             if (ImGui::MenuItem("Wavefront (.obj)"))
             {
-                char const * lFilterPatterns[1]={"*.obj"};
-                const char* FileName =  tinyfd_openFileDialog("Open OBJ File", "", 1, lFilterPatterns,"Wavefront(.obj) file", 0);
+                char const* lFilterPatterns[1] = { "*.obj" };
+                const char* FileName = tinyfd_openFileDialog("Open OBJ File", "", 1, lFilterPatterns, "Wavefront(.obj) file", 0);
 
                 if (FileName != nullptr)
                 {
@@ -160,7 +160,7 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
                     }
                 }
             }
-            
+
             ImGui::EndMenu();
         }
 
@@ -168,7 +168,7 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
 
         if (ImGui::MenuItem("Quit"))
         {
-            ImGui::OpenPopup("프로그램 종료");   
+            ImGui::OpenPopup("프로그램 종료");
         }
 
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
@@ -183,11 +183,11 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
 
             /* Move Cursor X Position */
             ImGui::SetCursorPosX(ContentWidth - (160.f + 10.0f));
-            
+
             if (ImGui::Button("OK", ImVec2(80, 0))) { PostQuitMessage(0); }
 
             ImGui::SameLine();
-            
+
             ImGui::SetItemDefaultFocus();
             ImGui::PushID("CancelButtonWithQuitWindow");
             ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0.0f, 1.0f, 1.0f));
@@ -199,7 +199,7 @@ void ControlEditorPanel::CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont)
 
             ImGui::EndPopup();
         }
-        
+
         ImGui::End();
     }
 }
@@ -230,7 +230,7 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
         if (ImGui::DragFloat("##Fov", FOV, 0.1f, 30.0f, 120.0f, "%.1f"))
         {
             //GEngineLoop.GetWorld()->GetCamera()->SetFOV(FOV);
-            
+
         }
         ImGui::Spacing();
 
@@ -241,12 +241,12 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
         {
             GEngine->GetLevelEditor()->GetActiveViewportClient()->SetCameraSpeedScalar(CameraSpeed);
         }
-        
+
         ImGui::EndPopup();
     }
 
     ImGui::SameLine();
-    
+
     ImGui::PushFont(IconFont);
     if (ImGui::Button("\ue9c8", ButtonSize))
     {
@@ -262,19 +262,21 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
         };
 
         static const Primitive primitives[] = {
-            
-            { .label= "Cube",       .obj= OBJ_CUBE },
-            { .label= "Sphere",     .obj= OBJ_SPHERE },
-            { .label= "Cylinder",   .obj= OBJ_Cylinder },
-            { .label= "Plane",      .obj= OBJ_Plane },
-            { .label= "Cone",       .obj= OBJ_Cone },
-            { .label= "Torus",      .obj= OBJ_Torus },
-            { .label= "SpotLight",  .obj= OBJ_SpotLight },
-            { .label= "Particle",   .obj= OBJ_PARTICLE },
-            { .label= "Text",       .obj= OBJ_Text },
-            {.label = "Fog",        .obj = OBJ_Fog},
-            {.label = "Fireball",   .obj = OBJ_Fireball }
-            
+
+            {.label = "EmptyActor",         .obj = OBJ_StaticMesh},
+            {.label = "Cube",               .obj = OBJ_CUBE },
+            {.label = "Sphere",             .obj = OBJ_SPHERE },
+            {.label = "Cylinder",           .obj = OBJ_Cylinder },
+            {.label = "Plane",              .obj = OBJ_Plane },
+            {.label = "Cone",               .obj = OBJ_Cone },
+            {.label = "Torus",              .obj = OBJ_Torus },
+            {.label = "SpotLight",          .obj = OBJ_SpotLight },
+            {.label = "PointLight",         .obj = OBJ_PointLight },
+            {.label = "DirectionalLight",   .obj = OBJ_DirectionalLight },
+            {.label = "Particle",           .obj = OBJ_Particle },
+            {.label = "Text",               .obj = OBJ_Text },
+            {.label = "Fog",                .obj = OBJ_Fog},
+
         };
 
         for (const auto& primitive : primitives)
@@ -287,12 +289,28 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
                 AStaticMeshActor* TempActor = nullptr;
                 switch (static_cast<OBJECTS>(primitive.obj))
                 {
+                case OBJ_StaticMesh:
+                {
+                    TempActor = World->SpawnActor<AStaticMeshActor>();
+                    TempActor->SetActorLabel(TEXT("OBJ_EmptyActor"));
+                    UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
+                    break;
+                }
+                case OBJ_CUBE:
+                {
+                    TempActor = World->SpawnActor<AStaticMeshActor>();
+                    TempActor->SetActorLabel(TEXT("OBJ_CUBE"));
+                    UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
+                    FManagerOBJ::CreateStaticMesh("Assets/Cube.obj");
+                    MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Cube.obj"));
+                    break;
+                }
                 case OBJ_SPHERE:
                 {
                     TempActor = World->SpawnActor<AStaticMeshActor>();
                     TempActor->SetActorLabel(TEXT("OBJ_SPHERE"));
-                        UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
-                        FManagerOBJ::CreateStaticMesh("Assets/Sphere.obj");
+                    UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
+                    FManagerOBJ::CreateStaticMesh("Assets/Sphere.obj");
                     MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Sphere.obj"));
                     break;
                 }
@@ -305,45 +323,31 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
                     MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Cylinder.obj"));
                     break;
                 }
-                    case OBJ_Cone:
-                    {
-                        TempActor = World->SpawnActor<AStaticMeshActor>();
-                        TempActor->SetActorLabel(TEXT("OBJ_Cone"));
-                        UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
-                        FManagerOBJ::CreateStaticMesh("Assets/Cone.obj");
-                        MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Cone.obj"));
-                        break;
-                    }
                 case OBJ_Plane:
-                    {
-                        TempActor = World->SpawnActor<AStaticMeshActor>();
-                        TempActor->SetActorLabel(TEXT("OBJ_Plane"));
-                        UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
-                        FManagerOBJ::CreateStaticMesh("Assets/Plane.obj");
-                        MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Plane.obj"));
-                        break;
-                    }
-                case OBJ_Torus:
-                    {
-                        TempActor = World->SpawnActor<AStaticMeshActor>();
-                        TempActor->SetActorLabel(TEXT("OBJ_Torus"));
-                        UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
-                        FManagerOBJ::CreateStaticMesh("Assets/Torus.obj");
-                        MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Torus.obj"));
-                        break;
-                    }
-                case OBJ_StaticMesh:
-                    {
-                        TempActor = World->SpawnActor<AStaticMeshActor>();
-                        break;
-                    }
-                case OBJ_CUBE:
                 {
                     TempActor = World->SpawnActor<AStaticMeshActor>();
-                    TempActor->SetActorLabel(TEXT("OBJ_CUBE"));
+                    TempActor->SetActorLabel(TEXT("OBJ_Plane"));
                     UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
-                    FManagerOBJ::CreateStaticMesh("Assets/Cube.obj");
-                    MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Cube.obj"));
+                    FManagerOBJ::CreateStaticMesh("Assets/Plane.obj");
+                    MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Plane.obj"));
+                    break;
+                }
+                case OBJ_Cone:
+                {
+                    TempActor = World->SpawnActor<AStaticMeshActor>();
+                    TempActor->SetActorLabel(TEXT("OBJ_Cone"));
+                    UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
+                    FManagerOBJ::CreateStaticMesh("Assets/Cone.obj");
+                    MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Cone.obj"));
+                    break;
+                }
+                case OBJ_Torus:
+                {
+                    TempActor = World->SpawnActor<AStaticMeshActor>();
+                    TempActor->SetActorLabel(TEXT("OBJ_Torus"));
+                    UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
+                    FManagerOBJ::CreateStaticMesh("Assets/Torus.obj");
+                    MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"Torus.obj"));
                     break;
                 }
                 case OBJ_SpotLight:
@@ -352,10 +356,32 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
                     SpawnedActor->SetActorLabel(TEXT("OBJ_SpotLight"));
                     SpawnedActor->AddComponent<USpotLightComponent>();
                     UBillboardComponent* BillboardComponent = SpawnedActor->AddComponent<UBillboardComponent>();
-                    BillboardComponent->SetTexture(L"Assets/Texture/spotLight.png");
+                    //BillboardComponent->SetTexture(L"Assets/Texture/SpotLight_64x.png");
+                    BillboardComponent->SetTexture(L"Engine/Icon/SpotLight_64x.png");
                     break;
                 }
-                case OBJ_PARTICLE:
+                case OBJ_PointLight:
+                {
+                    SpawnedActor = World->SpawnActor<AActor>();
+                    SpawnedActor->SetActorLabel(TEXT("OBJ_PointLight"));
+                    SpawnedActor->AddComponent<UPointLightComponent>();
+                    UBillboardComponent* BillboardComponent = SpawnedActor->AddComponent<UBillboardComponent>();
+                    //BillboardComponent->SetTexture(L"Assets/Texture/PointLight_64x.png");
+                    BillboardComponent->SetTexture(L"Engine/Icon/PointLight_64x.png");
+                    break;
+                }
+                case OBJ_DirectionalLight:
+                {
+                    SpawnedActor = World->SpawnActor<AActor>();
+                    SpawnedActor->SetActorLabel(TEXT("OBJ_DirectionalLight"));
+                    UDirectionalLightComponent* LightComp = SpawnedActor->AddComponent<UDirectionalLightComponent>();
+                    SpawnedActor->AddComponent<UBillboardComponent>(LightComp->GetTexture2D());
+                    //UBillboardComponent* BillboardComponent = SpawnedActor->AddComponent<UBillboardComponent>();
+                    //BillboardComponent->SetTexture(L"Assets/Texture/DirectionalLight_64x.png");
+                    //BillboardComponent->SetTexture(L"Engine/Icon/DirectionalLight_64x.png");
+                    break;
+                }
+                case OBJ_Particle:
                 {
                     SpawnedActor = World->SpawnActor<AActor>();
                     SpawnedActor->SetActorLabel(TEXT("OBJ_PARTICLE"));
@@ -383,23 +409,23 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
                     SpawnedActor->AddComponent<UHeightFogComponent>();
                     break;
                 }
-                case OBJ_Fireball:
-                {
-                    TempActor = World->SpawnActor<AStaticMeshActor>();
-                    TempActor->SetActorLabel(TEXT("OBJ_Fireball"));
-                    UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
-                    FManagerOBJ::CreateStaticMesh("Assets/FireBall.obj");
-                    MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"FireBall.obj"));
-                    TempActor->AddComponent<UFireballComponent>();
-                    break;
-                }
+                //case OBJ_Fireball:
+                //{
+                //    TempActor = World->SpawnActor<AStaticMeshActor>();
+                //    TempActor->SetActorLabel(TEXT("OBJ_Fireball"));
+                //    UStaticMeshComponent* MeshComp = TempActor->GetStaticMeshComponent();
+                //    FManagerOBJ::CreateStaticMesh("Assets/FireBall.obj");
+                //    MeshComp->SetStaticMesh(FManagerOBJ::GetStaticMesh(L"FireBall.obj"));
+                //    TempActor->AddComponent<UFireballComponent>();
+                //    break;
+                //}
                 case OBJ_TRIANGLE:
                 case OBJ_CAMERA:
                 case OBJ_PLAYER:
                 case OBJ_END:
                     break;
                 }
-        
+
                 if (SpawnedActor)
                 {
                     World->SetPickedActor(SpawnedActor);
@@ -417,7 +443,7 @@ void ControlEditorPanel::CreateFlagButton() const
     const char* ViewTypeNames[] = { "Perspective", "Top", "Bottom", "Left", "Right", "Front", "Back" };
     ELevelViewportType ActiveViewType = ActiveViewport->GetViewportType();
     FString TextViewType = ViewTypeNames[ActiveViewType];
-    
+
     if (ImGui::Button(GetData(TextViewType), ImVec2(120, 32)))
     {
         // toggleViewState = !toggleViewState;
@@ -443,11 +469,11 @@ void ControlEditorPanel::CreateFlagButton() const
     }
 
     ImGui::SameLine();
-    
-    const char* ViewModeNames[] = { "Lit", "Unlit", "Wireframe", "Base Color", "Normal", "Depth", "World Position"};
+
+    const char* ViewModeNames[] = { "Lit", "Unlit", "Wireframe", "Base Color", "Normal", "Depth", "World Position" };
     FString SelectLightControl = ViewModeNames[(int)ActiveViewport->GetViewMode()];
     ImVec2 LightTextSize = ImGui::CalcTextSize(GetData(SelectLightControl));
-    
+
     if (ImGui::Button(GetData(SelectLightControl), ImVec2(30 + LightTextSize.x, 32)))
     {
         ImGui::OpenPopup("LightControl");
@@ -482,7 +508,7 @@ void ControlEditorPanel::CreateFlagButton() const
         FString SelectShaderControl = ShadeModeNames[(int)ActiveViewport->GetLighitingModel() - 1];
         ImVec2 ShaderTextSize = ImGui::CalcTextSize(GetData(SelectShaderControl));
 
-        if (ImGui::Button(GetData(SelectShaderControl), ImVec2(30 + ShaderTextSize.x, 32))) 
+        if (ImGui::Button(GetData(SelectShaderControl), ImVec2(30 + ShaderTextSize.x, 32)))
         {
             ImGui::OpenPopup("ShaderControl");
         }
@@ -497,7 +523,7 @@ void ControlEditorPanel::CreateFlagButton() const
                     ActiveViewport->SetLightingModel((ELightingModel)(i + 1));
                 }
 
-                if (bIsSelected) 
+                if (bIsSelected)
                 {
                     ImGui::SetItemDefaultFocus();
                 }
@@ -508,12 +534,12 @@ void ControlEditorPanel::CreateFlagButton() const
 
         ImGui::SameLine();
     }
-    
+
     if (ImGui::Button("Show", ImVec2(60, 32)))
     {
         ImGui::OpenPopup("ShowControl");
     }
-    
+
     const char* items[] = { "AABB", "Primitive", "BillBoard", "UUID", "Fog" };
     uint64 ActiveViewportFlags = ActiveViewport->GetShowFlag();
 
@@ -527,7 +553,7 @@ void ControlEditorPanel::CreateFlagButton() const
             (ActiveViewportFlags & static_cast<uint64>(EEngineShowFlags::SF_UUIDText)) != 0,
             (ActiveViewportFlags & static_cast<uint64>(EEngineShowFlags::SF_Fog)) != 0
         };
-        
+
         for (int i = 0; i < IM_ARRAYSIZE(items); i++)
         {
             ImGui::Checkbox(items[i], &selected[i]);
@@ -589,7 +615,7 @@ void ControlEditorPanel::CreateSRTButton(ImVec2 ButtonSize) const
     AEditorPlayer* Player = GEngine->GetWorld()->GetEditorPlayer();
 
     ImVec4 ActiveColor = ImVec4(0.00f, 0.00f, 0.85f, 1.0f);
-    
+
     ControlMode ControlMode = Player->GetControlMode();
 
     if (ControlMode == CM_TRANSLATION)
@@ -604,7 +630,7 @@ void ControlEditorPanel::CreateSRTButton(ImVec2 ButtonSize) const
     {
         ImGui::PopStyleColor();
     }
-	
+
     ImGui::SameLine();
 
     if (ControlMode == CM_ROTATION)
@@ -619,7 +645,7 @@ void ControlEditorPanel::CreateSRTButton(ImVec2 ButtonSize) const
     {
         ImGui::PopStyleColor();
     }
-	
+
     ImGui::SameLine();
 
     if (ControlMode == CM_SCALE)
