@@ -4,7 +4,7 @@
 #define NUM_SPOT_LIGHT 4
 
 //#define UNLIT 1
-#define LIGHTING_MODEL_GOURAUD 1
+//#define LIGHTING_MODEL_GOURAUD 1
 //#define LIGHTING_MODEL_LAMBERT 1
 //#define LIGHTING_MODEL_PHONG 1
 
@@ -221,12 +221,13 @@ PS_OUT Uber_PS(VS_OUT Input)
     
     float4 finalPixel;
     float4 albedoColor;
+    
     float4 textureColor = g_Texture.Sample(g_Sampler, Input.TexCoord);
     bool isValidTexture = dot(textureColor, float4(1, 1, 1, 1)) > 1e-5f;
     
     if (isValidTexture)
     {
-        albedoColor = textureColor;
+        albedoColor = textureColor * float4(Material.DiffuseColor, 1);
     }
     else
     {
