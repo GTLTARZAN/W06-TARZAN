@@ -219,6 +219,9 @@ void FRenderer::CreateUberShader()
 
     // Create BlinnPhongPixelShader
     ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", BlinnPhongPS[0], BlinnPhongPS[1], ELightingModel::BlinnPhong);
+
+    // Create NormalPixelShader
+    ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", NormalPS[0], NormalPS[1], ELightingModel::Normal);
 }
 
 void FRenderer::ReleaseShader()
@@ -262,6 +265,11 @@ void FRenderer::ReleaseHotReloadShader()
         BlinnPhongPS[1]->Release();
     }
 
+    if (NormalPS[0] != NormalPS[1])
+    {
+        NormalPS[1]->Release();
+    }
+
     if (UnlitPS[0] != UnlitPS[1]) 
     {
         UnlitPS[1]->Release();
@@ -302,6 +310,10 @@ void FRenderer::PrepareUberShader() const
     case ELightingModel::Unlit:
         Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
         Graphics->DeviceContext->PSSetShader(UnlitPS[0], nullptr, 0);
+        break;
+    case ELightingModel::Normal:
+        Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
+        Graphics->DeviceContext->PSSetShader(NormalPS[0], nullptr, 0);
         break;
     }
     

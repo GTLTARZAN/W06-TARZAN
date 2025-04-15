@@ -296,6 +296,8 @@ PS_OUT Uber_PS(VS_OUT Input)
     finalPixel = finalColor;
 #elif UNLIT
     finalPixel = albedoColor;
+#elif SHOW_NORMAL
+    finalPixel = float4(normalWS * 0.5f + 0.5f, 1.0f);
 #endif
     
     Output.Color = finalPixel;
