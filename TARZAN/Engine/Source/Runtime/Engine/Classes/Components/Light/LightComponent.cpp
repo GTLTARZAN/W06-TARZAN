@@ -119,7 +119,7 @@ UPointLightComponent::~UPointLightComponent()
 
 void UPointLightComponent::SetRadius(float InRadius)
 {
-    Radius = Radius;
+    Radius = InRadius;
 }
 
 float UPointLightComponent::GetRadius() const
