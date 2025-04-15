@@ -373,12 +373,12 @@ void PropertyEditorPanel::Render()
                 }
             }
 
-            float RadiusFallOffVal = SpotLightComponent->GetLightFalloffExponent();
-            if (ImGui::SliderFloat("RadiusFallOff", &RadiusFallOffVal, 0.0f, 10.0f))
+            float LightFalloffExponentVal = SpotLightComponent->GetLightFalloffExponent();
+            if (ImGui::SliderFloat("LightFalloffExponent", &LightFalloffExponentVal, 0.0f, 10.0f))
             {
                 if (SpotLightComponent)
                 {
-                    SpotLightComponent->SetLightFalloffExponent(RadiusFallOffVal);
+                    SpotLightComponent->SetLightFalloffExponent(LightFalloffExponentVal);
                 }
             }
 
