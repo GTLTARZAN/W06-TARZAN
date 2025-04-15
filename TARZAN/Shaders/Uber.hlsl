@@ -234,9 +234,10 @@ PS_OUT Uber_PS(VS_OUT Input)
         float3 T = normalize(Input.Tangent.xyz);
         float3 N = normalize(Input.Normal);
         float3 B = normalize(cross(N, T));
+        N = normalize(cross(T, B));
         float3x3 TBN = float3x3(T, B, N);
     
-        float3 normalTS = NormalMap.xyz * 2.0f - 1.0f;
+        float3 normalTS = NormalMap.xyz * 2.0f - 1.0f; 
         normalWS = normalize(mul(normalTS, TBN));
     }
     else
@@ -245,6 +246,7 @@ PS_OUT Uber_PS(VS_OUT Input)
     }
     
 #if LIGHTING_MODEL_GOURAUD
+    
     finalPixel = Input.Color;
 #elif LIGHTING_MODEL_LAMBERT
     float3 viewDir = normalize(Input.WorldPos - CameraWorldPos);

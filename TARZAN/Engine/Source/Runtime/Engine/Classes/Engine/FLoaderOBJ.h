@@ -476,6 +476,11 @@ struct FLoaderOBJ
         for (int32 i = 0; i < OutStaticMesh.Vertices.Num(); i++)
         {
             FVector tangent = tangentSums[i].Normalize();
+            //FVector tangent = tangentSums[i];
+            //if (tangent ==  FVector::ZeroVector)
+            //    tangent = tangent.Normalize();
+            //else
+            //    tangent = FVector(1, 0, 0); // 기본 탄젠트
             OutStaticMesh.Vertices[i].tx = tangent.x;
             OutStaticMesh.Vertices[i].ty = tangent.y;
             OutStaticMesh.Vertices[i].tz = tangent.z;
@@ -539,14 +544,14 @@ public:
         }
         
         FWString BinaryPath = (PathFileName + ".bin").ToWideString();
-        //if (std::ifstream(BinaryPath).good())
-        //{
-        //    if (LoadStaticMeshFromBinary(BinaryPath, *NewStaticMesh))
-        //    {
-        //        ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
-        //        return NewStaticMesh;
-        //    }
-        //}
+        if (std::ifstream(BinaryPath).good())
+        {
+            if (LoadStaticMeshFromBinary(BinaryPath, *NewStaticMesh))
+            {
+                ObjStaticMeshMap.Add(PathFileName, NewStaticMesh);
+                return NewStaticMesh;
+            }
+        }
         
         // Parse OBJ
         FObjInfo NewObjInfo;
@@ -640,6 +645,7 @@ public:
         {
             Serializer::WriteFString(File, Material.MTLName);
             File.write(reinterpret_cast<const char*>(&Material.bHasTexture), sizeof(Material.bHasTexture));
+            File.write(reinterpret_cast<const char*>(&Material.bHasNormalMap), sizeof(Material.bHasNormalMap));
             File.write(reinterpret_cast<const char*>(&Material.bTransparent), sizeof(Material.bTransparent));
             File.write(reinterpret_cast<const char*>(&Material.Diffuse), sizeof(Material.Diffuse));
             File.write(reinterpret_cast<const char*>(&Material.Specular), sizeof(Material.Specular));
@@ -840,8 +846,6 @@ struct EdgeCollapse {
         return cost > other.cost; // 최소 힙: 낮은 cost 우선
     }
 };
-
-
 
 class QEMSimplifier {
 public:
