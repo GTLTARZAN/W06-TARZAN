@@ -375,7 +375,7 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
                     SpawnedActor = World->SpawnActor<AActor>();
                     SpawnedActor->SetActorLabel(TEXT("OBJ_DirectionalLight"));
                     UDirectionalLightComponent* LightComp = SpawnedActor->AddComponent<UDirectionalLightComponent>();
-                    SpawnedActor->AddComponent<UBillboardComponent>(LightComp->GetTexture2D());
+                    //SpawnedActor->AddComponent<UBillboardComponent>(LightComp->GetTexture2D());
                     //UBillboardComponent* BillboardComponent = SpawnedActor->AddComponent<UBillboardComponent>();
                     //BillboardComponent->SetTexture(L"Assets/Texture/DirectionalLight_64x.png");
                     //BillboardComponent->SetTexture(L"Engine/Icon/DirectionalLight_64x.png");

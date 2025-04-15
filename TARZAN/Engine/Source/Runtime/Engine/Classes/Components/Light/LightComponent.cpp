@@ -121,6 +121,10 @@ UPointLightComponent::~UPointLightComponent()
 {
 }
 
+void UPointLightComponent::InitializeComponent()
+{
+}
+
 void UPointLightComponent::SetRadius(float InRadius)
 {
     Radius = InRadius;

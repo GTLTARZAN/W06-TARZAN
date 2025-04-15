@@ -66,13 +66,11 @@ public:
     UDirectionalLightComponent();
     virtual ~UDirectionalLightComponent() override;
 
-private:
     virtual void InitializeComponent() override;
 
 protected:
     FVector Direction;
 };
-
 
 
 // @todo 파일 분리하기
