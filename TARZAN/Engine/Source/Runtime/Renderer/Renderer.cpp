@@ -153,7 +153,6 @@ void FRenderer::CreateShader()
     ShaderManager.CreatePixelShader(L"Shaders/LightingPassPixelShader.hlsl", "main", LightingPassPS);
 #else
     CreateUberShader();
-
 #endif
 
     ShaderManager.CreatePixelShader(L"Shaders/GizmoPixelShader.hlsl", "main", GizmoPixelShader, nullptr);
@@ -193,6 +192,7 @@ void FRenderer::CreateUberShader()
     {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"MATERIAL_INDEX", 0, DXGI_FORMAT_R32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
@@ -739,7 +739,23 @@ void FRenderer::RenderStaticMeshes()
         {
             for (int i = 0; i < LightObjs.Num(); i++) 
             {
-                // TODO: LIGHT 관련 클래스 만들고 작업필요합니다.
+                if (LightObjs[i]->IsA<USpotLightComponent>())
+                {
+                    if (USpotLightComponent* SpotLight = Cast<USpotLightComponent>(LightObjs[i]))
+                    {
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Color = SpotLight->GetColor();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Position = SpotLight->GetWorldLocation();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Direction = SpotLight->GetForwardVector();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Intensity = SpotLight->GetIntensity();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].AttenuationRadius = SpotLight->GetRadius();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].InnerConeAngle = SpotLight->GetInnerConeAngle();
+                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].OuterConeAngle = SpotLight->GetOuterConeAngle();
+                        SpotLightArrayInfo->SpotLightCount++;
+                    }
+
+                    continue;
+                }
+
                 if (LightObjs[i]->IsA<UPointLightComponent>())
                 {
                     if (UPointLightComponent* PointLight = Cast<UPointLightComponent>(LightObjs[i]))
@@ -752,21 +768,7 @@ void FRenderer::RenderStaticMeshes()
                         PointLightArrayInfo->PointLightCount++;
                     }
                 }
-                else if (LightObjs[i]->IsA<USpotLightComponent>())
-                {
-                    if (USpotLightComponent* SpotLight = Cast<USpotLightComponent>(LightObjs[i]))
-                    {
-
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Color = SpotLight->GetColor();
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Position = SpotLight->GetWorldLocation();
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Direction = SpotLight->GetForwardVector();
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].Intensity = SpotLight->GetIntensity();
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].AttenuationRadius = SpotLight->GetRadius();
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].InnerConeAngle = SpotLight->GetInnerConeAngle();
-                        SpotLightArrayInfo->SpotLightConstants[SpotLightArrayInfo->SpotLightCount].OuterConeAngle = SpotLight->GetOuterConeAngle();
-                        SpotLightArrayInfo->SpotLightCount++;
-                    }
-                }
+                
             }
         }
 
@@ -808,6 +810,17 @@ void FRenderer::RenderStaticMeshes()
             .PointLights = PointLight,
             .SpotLights = SpotLight,
         };
+
+        for (int i = 0; i < PointLightArrayInfo->PointLightCount; i++)
+        {
+            LightConstant.PointLights[i] = PointLightArrayInfo->PointLightConstants[i];
+        }
+
+        for (int i = 0; i < SpotLightArrayInfo->SpotLightCount; i++)
+        {
+            LightConstant.SpotLights[i] = SpotLightArrayInfo->SpotLightConstants[i];
+        }
+
         ConstantBufferUpdater.UpdateLightConstants(LightConstantBuffer, LightConstant);
 
         //FMatrix MVP = Model * ActiveViewport->GetViewMatrix() * ActiveViewport->GetProjectionMatrix();

@@ -28,8 +28,9 @@ struct FVertexSimple
 {
     float x, y, z;    // Position
     float r, g, b, a; // Color
-    float nx, ny, nz;
-    float u=0, v=0;
+    float tx, ty, tz; // Tangent
+    float nx, ny, nz; // Normal
+    float u, v;       // UV
     uint32 MaterialIndex;
 };
 
@@ -373,8 +374,8 @@ struct FSpotLightInfo
 {
     FLinearColor Color;
     FVector Position;
-    FVector Direction;
     float Intensity;
+    FVector Direction;
     float AttenuationRadius;
     float LightFalloffExponent;
     float InnerConeAngle;
