@@ -274,7 +274,8 @@ PS_OUT Uber_PS(VS_OUT Input)
     
     finalPixel = finalColor;
 #elif LIGHTING_MODEL_PHONG
-    float3 viewDir = normalize(Input.WorldPos - CameraWorldPos);
+    // 물체에서 카메라 방향으로 따져야 내적에 문제가 없음
+    float3 viewDir = normalize(CameraWorldPos - Input.WorldPos);
     float4 finalColor = albedoColor * CalculateAmbientLight(Ambient);
     
     // DirectionalLight
@@ -314,8 +315,8 @@ float4 CalculateDirectionalLightBlinnPhong(FDirectionalLightInfo info, float3 no
     // Specular
     float3 halfDir = normalize(-info.Direction.xyz + viewDir);
     
-    // TODO: 32 값은 Roughness 값으로 변수화 필요
-    float spec = pow(max(dot(normal, halfDir), 0.0f), 32);
+    // 거리에 따른 감쇠가 없으므로 info.LightFalloffExponent를 통한 제곱을 뺌
+    float spec = max(dot(normal, halfDir), 0.0f);
 
     float3 diffuse = albedo * info.Color.rgb * info.Intensity * diff;
     float3 specular = info.Color.rgb * info.Intensity * spec;
@@ -336,7 +337,11 @@ float4 CalculatePointLightBlinnPhong(FPointLightInfo info, float3 worldPos, floa
 
     // 거리에 따른 감쇠 계산 (Radius를 기준으로 정규화)
     float normalizedDistance = distance / info.AttenuationRadius;
-    float attenuation = 1.0f / (1.0f + info.LightFalloffExponent * normalizedDistance * normalizedDistance);
+    float attenuation = 1.0f / (1.0f + normalizedDistance * normalizedDistance);
+    attenuation = (attenuation - 0.5f) * 2.0f;
+    attenuation = pow(attenuation, info.LightFalloffExponent);
+    attenuation = max(0.0f, attenuation);
+    
     float diff = max(0.0f, dot(normal, lightDir));
     
     float3 halfDir = normalize(lightDir + viewDir);
