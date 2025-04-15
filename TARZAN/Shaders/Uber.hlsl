@@ -254,7 +254,7 @@ PS_OUT Uber_PS(VS_OUT Input)
     
 #if LIGHTING_MODEL_GOURAUD
     
-    finalPixel = Input.Color;
+    finalPixel = Input.Color * albedoColor;
 #elif LIGHTING_MODEL_LAMBERT
     float3 viewDir = normalize(Input.WorldPos - CameraWorldPos);
     // AmbientLight
@@ -356,7 +356,7 @@ float4 CalculateSpotLightBlinnPhong(FSpotLightInfo info, float3 worldPos, float3
     float3 lightDir = info.Position.xyz - worldPos;
     float distance = length(lightDir);
     // 거리가 Radius를 초과하면 빛의 영향을 주지 않음
-    if (distance > info.AttenuationRadius * 3.0f)
+    if (distance > info.AttenuationRadius)
         return float4(0.0f, 0.0f, 0.0f, 0.0f);
     
     lightDir = normalize(lightDir);
