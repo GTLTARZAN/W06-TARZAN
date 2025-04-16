@@ -37,8 +37,16 @@ public:
     std::shared_ptr<FTexture> Texture;
     FWString TexturePath;
     
+    void SetTintColor(FLinearColor InColor) { TintColor = InColor; }
+    void SetIsLightIcon(bool IsLIcon) { bIsLightIcon = IsLIcon; }
+
+    FLinearColor GetTintColor() const { return TintColor; }
+    bool IsLightIcon() const { return bIsLightIcon; }
+
 protected:
     bool CheckPickingOnNDC(const TArray<FVector>& checkQuad, float& hitDistance);
 
 private:
+    FLinearColor TintColor = FLinearColor::White();
+    bool bIsLightIcon = false;
 };

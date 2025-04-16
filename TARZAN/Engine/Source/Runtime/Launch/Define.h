@@ -17,8 +17,8 @@
 #define _TCHAR_DEFINED
 
 #define Max_Fireball 300
-#define NUM_POINT_LIGHT 4
-#define NUM_SPOT_LIGHT 4
+#define NUM_POINT_LIGHT 16
+#define NUM_SPOT_LIGHT 16
 
 #include <d3d11.h>
 
@@ -291,12 +291,22 @@ struct FCircle
     FLinearColor Color;
 };
 
+struct FLine 
+{
+    FVector LineStart; // 시작점
+    float pad0;
+    FVector LineEnd;   // 끝점
+    float pad1;
+    FLinearColor LineColor; // 색상
+};
+
 struct FPrimitiveCounts 
 {
 	int BoundingBoxCount;
 	int pad;
 	int ConeCount; 
     int OBBCount;
+    int CircleCount;
 };
 struct FLighting
 {
@@ -422,6 +432,12 @@ struct FTextureConstants {
     float VOffset;
     float pad0;
     float pad1;
+};
+
+struct FTextureMaterialConstants
+{
+    FLinearColor TintColor;
+    float IsLightIcon;
 };
 
 struct FSubUVConstant

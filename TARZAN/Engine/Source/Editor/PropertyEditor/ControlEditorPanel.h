@@ -13,6 +13,7 @@ private:
     void CreateMenuButton(ImVec2 ButtonSize, ImFont* IconFont);
     void CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont);
     void CreateFlagButton() const;
+    void CreateLightCutButton() const;
     void CreatePIEButton(ImVec2 ButtonSize) const;
     void CreateSRTButton(ImVec2 ButtonSize) const;
 

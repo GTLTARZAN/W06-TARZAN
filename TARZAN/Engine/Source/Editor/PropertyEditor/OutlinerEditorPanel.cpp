@@ -8,6 +8,11 @@ void OutlinerEditorPanel::Render()
 {
     /* Pre Setup */
     ImGuiIO& io = ImGui::GetIO();
+
+    //io.Fonts->Clear();
+    //io.Fonts->AddFontFromFileTTF("Assets/Fonts/NotoSansKR-Regular.otf", 11.0f);
+
+    //ImGui::GetStyle().ScaleAllSizes(0.9f);
     
     float PanelWidth = (Width) * 0.2f - 6.0f;
     float PanelHeight = (Height) * 0.3f;

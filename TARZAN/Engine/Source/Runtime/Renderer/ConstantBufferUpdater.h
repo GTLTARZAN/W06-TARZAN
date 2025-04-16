@@ -45,8 +45,8 @@ public:
     void UpdateObjectMatrixConstants(ID3D11Buffer* ObjectMatrixConstantBuffer, const FObjectMatrixConstants& ObjectMatrix) const;
     void UpdateCameraPositionConstants(ID3D11Buffer* CameraConstantBuffer, const FCameraConstant& CameraPosition) const;
     void UpdateLightConstants(ID3D11Buffer* LightConstantBuffer, const FLightConstants& Light) const;
-    void UpdateMaterialConstants(ID3D11Buffer* MaterialConstantBuffer, const FMaterialConstants& Material) const;
-
+    void UpdateMaterialConstants(ID3D11Buffer* MaterialConstantBuffer, const FMaterialConstants& Material) const; 
+    void UpdateTextureMaterialConstants(ID3D11Buffer* TextureMaterialBuffer, const FTextureMaterialConstants& TexMat) const;
 private:
     ID3D11DeviceContext* DeviceContext = nullptr;
 };

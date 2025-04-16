@@ -202,6 +202,7 @@
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Engine\World.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\UnrealEngine.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Launch\LaunchEngineLoop.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Renderer\LightTreeNode.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Renderer\Pass\GBufferPass.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Renderer\Pass\LightingPass.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Renderer\Pass\OverlayPass.cpp" />
@@ -311,6 +312,7 @@
     <ClInclude Include="Engine\Source\Runtime\Launch\EditorEngine.h" />
     <ClInclude Include="Engine\Source\Runtime\Launch\ImGuiManager.h" />
     <ClInclude Include="Engine\Source\Runtime\Renderer\ConstantBufferUpdater.h" />
+    <ClInclude Include="Engine\Source\Runtime\Renderer\LightTreeNode.h" />
     <ClInclude Include="Engine\Source\Runtime\Renderer\Pass\GBufferPass.h" />
     <ClInclude Include="Engine\Source\Runtime\Renderer\Pass\LightingPass.h" />
     <ClInclude Include="Engine\Source\Runtime\Renderer\Pass\OverlayPass.h" />

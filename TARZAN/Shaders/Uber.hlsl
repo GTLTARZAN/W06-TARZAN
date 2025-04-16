@@ -169,10 +169,12 @@ struct VS_OUT
 {
     float4 Position : SV_POSITION;
     float4 Color : COLOR0;
-    float3 Tangent : TANGENT;
     float3 WorldPos : TEXCOORD0;
     float3 Normal : TEXCOORD1;
     float2 TexCoord : TEXCOORD2;
+    float3 TBN0 : TEXCOORD3;
+    float3 TBN1 : TEXCOORD4;
+    float3 TBN2 : TEXCOORD5;
 };
 
 struct PS_OUT
@@ -187,9 +189,18 @@ VS_OUT Uber_VS(VS_IN Input)
     float4 worldPos = mul(float4(Input.Position, 1.0f), World);
     output.Position = mul(worldPos, mul(View, Projection));
     output.WorldPos = worldPos.xyz;
-    output.Normal = normalize(mul(Input.Normal, (float3x3) WorldInverseTranspose));
     output.TexCoord = Input.TexCoord;
-    output.Tangent = Input.Tangent;
+    
+    float3 T = normalize(mul(Input.Tangent, (float3x3) World));
+    float3 N = normalize(mul(Input.Normal, (float3x3) WorldInverseTranspose));
+    T = normalize(T - N * dot(N, T));
+    float3 B = normalize(cross(N, T));
+    
+    output.Normal = N;
+    
+    output.TBN0 = float3(T.x, B.x, N.x);
+    output.TBN1 = float3(T.y, B.y, N.y);
+    output.TBN2 = float3(T.z, B.z, N.z);
     
 #if LIGHTING_MODEL_GOURAUD
     float3 viewDir = normalize(-worldPos.xyz);
@@ -241,13 +252,8 @@ PS_OUT Uber_PS(VS_OUT Input)
     float3 normalWS;
     if (HasNormalMap)
     {
-        float3 T = normalize(Input.Tangent.xyz);
-        float3 N = normalize(Input.Normal);
-        float3 B = normalize(cross(N, T));
-        N = normalize(cross(T, B));
-        float3x3 TBN = float3x3(T, B, N);
-    
-        float3 normalTS = NormalMap.xyz * 2.0f - 1.0f; 
+        float3x3 TBN = float3x3(Input.TBN0, Input.TBN1, Input.TBN2);
+        float3 normalTS = NormalMap.xyz * 2.0f - 1.0f;
         normalWS = normalize(mul(normalTS, TBN));
     }
     else
@@ -330,7 +336,7 @@ float4 CalculateDirectionalLightBlinnPhong(FDirectionalLightInfo info, float3 no
         //float spec = max(dot(normal, halfDir), 0.0f);
         spec = max(dot(normal, halfDir), 0);
         spec = pow(spec, 32);
-        spec *= diff;
+        //spec *= diff;
     }
 
     //// Specular
