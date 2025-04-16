@@ -103,7 +103,7 @@ public:
 
     // Forward+ Shaders
     ID3D11ComputeShader* ForwardPlusTilingCS = nullptr;
-    ID3D11PixelShader* ForwardPlusPS = nullptr; // 기존 Uber 셰이더를 활용할 수도 있음
+    ID3D11PixelShader* ForwardPlusPS = nullptr;
 
     ID3D11VertexShader* VertexShader = nullptr;
     ID3D11PixelShader* PixelShader = nullptr;

@@ -253,15 +253,69 @@ bool FShaderManager::CreatePixelShader(
     return SUCCEEDED(hr);
 }
 
-bool FShaderManager::CreatePixelShader(const FWString& psPath, const FString& psEntry, ID3D11PixelShader*& outPS, ELightingModel lightingModel)
+bool FShaderManager::CreatePixelShader(const FWString& psPath, const FString& psEntry, ID3D11PixelShader*& outPS, const D3D_SHADER_MACRO* pDefines) const
 {
     DWORD shaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
     shaderFlags |= D3DCOMPILE_DEBUG;
     shaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
 
     ID3DBlob* psBlob = nullptr;
-    HRESULT hr = D3DCompileFromFile(psPath.c_str(), nullptr, nullptr, *psEntry, "ps_5_0", shaderFlags, 0, &psBlob, nullptr);
+    ID3DBlob* errorBlob = nullptr;
 
+    HRESULT hr = D3DCompileFromFile(
+        psPath.c_str(),
+        pDefines, // 전달받은 매크로 사용
+        D3D_COMPILE_STANDARD_FILE_INCLUDE, // 표준 Include 핸들러 추가
+        *psEntry,
+        "ps_5_0",
+        shaderFlags,
+        0,
+        &psBlob,
+        &errorBlob
+    );
+
+    if (FAILED(hr))
+    {
+        if (errorBlob)
+        {
+            OutputDebugStringA(static_cast<char*>(errorBlob->GetBufferPointer()));
+            MessageBoxA(NULL, static_cast<char*>(errorBlob->GetBufferPointer()), "Shader Compile Error", MB_ICONERROR | MB_OK);
+            errorBlob->Release();
+        }
+        else
+        {
+            FWString errorMsg = L"Failed to compile pixel shader: " + psPath;
+            MessageBoxW(NULL, errorMsg.c_str(), L"Shader Compile Error", MB_ICONERROR | MB_OK);
+        }
+        if (psBlob) psBlob->Release();
+        return false;
+    }
+
+    if (errorBlob) errorBlob->Release();
+
+    hr = Device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &outPS);
+    psBlob->Release();
+
+    if (FAILED(hr))
+    {
+        MessageBoxW(NULL, L"Failed to create pixel shader object.", L"Error", MB_ICONERROR | MB_OK);
+        return false;
+    }
+
+    return true;
+}
+
+bool FShaderManager::CreatePixelShader(const FWString& psPath, const FString& psEntry, ID3D11PixelShader*& outPS, ELightingModel lightingModel)
+{
+    DWORD shaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+    shaderFlags |= D3DCOMPILE_DEBUG;
+    shaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
+    ID3DBlob* psBlob = nullptr;
+    HRESULT hr = D3DCompileFromFile(psPath.c_str(), nullptr, nullptr, *psEntry, "ps_5_0", shaderFlags, 0, &psBlob, nullptr);
+    if (FAILED(hr))
+    {
+        return false;
+    }
     hr = Device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &outPS);
     psBlob->Release();
     return SUCCEEDED(hr);
@@ -301,7 +355,7 @@ bool FShaderManager::CreateComputeShader(
     HRESULT hr = D3DCompileFromFile(
         csPath.c_str(),         // 셰이더 파일 경로
         nullptr,                // 매크로 정의 (필요시 추가)
-        nullptr,                // Include 핸들러 (필요시 추가)
+        D3D_COMPILE_STANDARD_FILE_INCLUDE, // 표준 Include 핸들러 추가
         *csEntry,               // 진입점 함수 이름
         "cs_5_0",               // 셰이더 모델 (Compute Shader 5.0)
         shaderFlags,            // 컴파일 플래그

@@ -220,14 +220,29 @@ void FRenderer::RenderPass()
     // --- Forward+ Light Culling Pass End ---
 
     // --- Forward+ Main Rendering Pass Start ---
-    // Bind LightIndexBuffer SRV to Pixel Shader stage (t7)
-    Graphics->DeviceContext->PSSetShaderResources(7, 1, &Graphics->LightIndexBufferSRV);
+    // Bind Resources for Forward+ Pixel Shader
+    ID3D11ShaderResourceView* psSRVs[] = {
+        Graphics->PointLightBufferSRV_CenterAndRadius, // t2
+        Graphics->PointLightBufferSRV_Color,           // t3
+        Graphics->SpotLightBufferSRV_CenterAndRadius,  // t4
+        Graphics->SpotLightBufferSRV_Color,            // t5
+        Graphics->SpotLightBufferSRV_SpotParams,       // t6
+        Graphics->LightIndexBufferSRV                  // t7
+    };
+    // Bind Point/Spot Light SRVs and Light Index Buffer (t2-t7)
+    Graphics->DeviceContext->PSSetShaderResources(2, 6, psSRVs); // Start slot 2, 6 views
+
+    // Bind ForwardPlus Frame Constant Buffer (b1) - Overwrites CameraConstantBuffer (b1) from PrepareUberShader
+    Graphics->DeviceContext->PSSetConstantBuffers(1, 1, &ForwardPlusFrameConstantBuffer);
 
     RenderUberPass(); // 기존 Uber Shader 렌더링 패스 호출
 
-    // Unbind LightIndexBuffer SRV
-    ID3D11ShaderResourceView* nullSRV = nullptr;
-    Graphics->DeviceContext->PSSetShaderResources(7, 1, &nullSRV);
+    // Unbind Forward+ Resources
+    ID3D11ShaderResourceView* nullSRVs_t2_t7[6] = { nullptr };
+    Graphics->DeviceContext->PSSetShaderResources(2, 6, nullSRVs_t2_t7); // Unbind t2 through t7
+
+    ID3D11Buffer* nullBuffers_b1[] = { nullptr };
+    Graphics->DeviceContext->PSSetConstantBuffers(1, 1, nullBuffers_b1); // Unbind b1
     // --- Forward+ Main Rendering Pass End ---
 #endif
 
@@ -287,7 +302,7 @@ void FRenderer::CreateShader()
     CreateUberShader();
 #endif
 
-    ShaderManager.CreatePixelShader(L"Shaders/GizmoPixelShader.hlsl", "main", GizmoPixelShader, nullptr);
+    ShaderManager.CreatePixelShader(L"Shaders/GizmoPixelShader.hlsl", "main", GizmoPixelShader);
 
     // Texture Shader
     D3D11_INPUT_ELEMENT_DESC textureLayout[] = {
@@ -299,7 +314,7 @@ void FRenderer::CreateShader()
         VertexTextureShader, textureLayout, ARRAYSIZE(textureLayout), &TextureInputLayout, &TextureStride, sizeof(FVertexTexture));
     ShaderManager.CreatePixelShader(
         L"Shaders/PixelTextureShader.hlsl", "main",
-        PixelTextureShader, nullptr);
+        PixelTextureShader);
 
     // Line Shader
     LastLineWriteTime = std::filesystem::last_write_time("Shaders/ShaderLine.hlsl");
@@ -313,13 +328,20 @@ void FRenderer::CreateShader()
 
     // Fog Shader
     ShaderManager.CreatePixelShader(
-        L"Shaders/PostProcessPixelShader.hlsl", "mainPS", PostProcessPassPS, nullptr);
+        L"Shaders/PostProcessPixelShader.hlsl", "mainPS", PostProcessPassPS);
 
     // Forward+ Shaders 로드 (일단은 GBuffer와 상관없이 로드)
-    ShaderManager.CreateComputeShader(L"Shaders/ForwadPlus/ForwardPlusTiling.hlsl", "CullLightsCS", ForwardPlusTilingCS);
-    // Forward+ Pixel Shader 로드 - 기존 Uber Shader를 활용하거나 전용 PS를 로드
-    // 예시: 전용 PS 로드 (매크로 설정 필요할 수 있음)
-    // ShaderManager.CreatePixelShader(L"Shaders/ForwadPlus/ForwardPluss.hlsl", "RenderScenePS", ForwardPlusPS);
+    ShaderManager.CreateComputeShader(L"Shaders/ForwardPlus/ForwardPlusTiling.hlsl", "CullLightsCS", ForwardPlusTilingCS);
+    // Forward+ Pixel Shader 로드 - 새로 추가된 매크로 지원 오버로드 사용
+    D3D_SHADER_MACRO forwardPlusDefines[] = {
+        { "USE_LIGHT_CULLING", "1" },
+        { "USE_DEPTH_BOUNDS", "1" }, // 필요시 깊이 버퍼 최적화 활성화 (Non-MSAA)
+        // { "USE_ALPHA_TEST", "1" },   // 필요시 알파 테스트 활성화
+        { nullptr, nullptr }
+    };
+    // 새로 추가된 함수 호출 (매크로 전달)
+    ShaderManager.CreatePixelShader(L"Shaders/ForwardPlus/ForwardPlus.hlsl", "RenderScenePS", ForwardPlusPS, forwardPlusDefines); // 파일명 수정: ForwardPluss -> ForwardPlus
+
     // 예시: Uber Shader 활용 (매크로 전달 기능 필요)
     // ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", ForwardPlusPS, nullptr, ELightingModel::ForwardPlus); // FShaderManager 수정 필요
 }
@@ -430,33 +452,48 @@ void FRenderer::PrepareUberShader() const
 {
     Graphics->DeviceContext->IASetInputLayout(UberInputLayout[0]);
 
-    switch (ActiveViewport->GetLighitingModel())
+    ID3D11PixelShader* pixelShaderToUse = nullptr; // PS는 아래 switch에서 결정
+
+    // Vertex Shader 선택
+    switch (ActiveViewport->GetLighitingModel()) 
     {
     case ELightingModel::None:
+        // None일 때 VS/PS 설정 필요? 일단 NormalVS/UnlitPS 사용하도록 함
         UE_LOG(LogLevel::Display, "No LightingModel");
+        Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
+        pixelShaderToUse = UnlitPS[0]; // 또는 다른 기본 PS
         break;
     case ELightingModel::Gouraud:
         Graphics->DeviceContext->VSSetShader(GouraudVS[0], nullptr, 0);
-        Graphics->DeviceContext->PSSetShader(GouraudPS[0], nullptr, 0);
+        pixelShaderToUse = GouraudPS[0]; 
         break;
     case ELightingModel::Lambert:
         Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
-        Graphics->DeviceContext->PSSetShader(LambertPS[0], nullptr, 0);
+        pixelShaderToUse = LambertPS[0];
         break;
     case ELightingModel::BlinnPhong:
         Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
-        Graphics->DeviceContext->PSSetShader(BlinnPhongPS[0], nullptr, 0);
+        pixelShaderToUse = BlinnPhongPS[0];
         break;
-    case ELightingModel::Unlit:
+    case ELightingModel::Unlit: 
         Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
-        Graphics->DeviceContext->PSSetShader(UnlitPS[0], nullptr, 0);
+        pixelShaderToUse = UnlitPS[0];
         break;
-    case ELightingModel::Normal:
+    case ELightingModel::Normal: 
         Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
-        Graphics->DeviceContext->PSSetShader(NormalPS[0], nullptr, 0);
+        pixelShaderToUse = NormalPS[0];
+        break;
+    default:
+        Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
+        pixelShaderToUse = UnlitPS[0]; // 기본값
         break;
     }
     
+    // Pixel Shader 설정
+    //Graphics->DeviceContext->PSSetShader(pixelShaderToUse, nullptr, 0);
+    Graphics->DeviceContext->PSSetShader(ForwardPlusPS, nullptr, 0);
+
+    // 상수 버퍼 설정 (VS/PS 공통)
     if (ObjectMatrixConstantBuffer)
     {
         Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ObjectMatrixConstantBuffer);
@@ -747,6 +784,7 @@ void FRenderer::RenderPrimitive(ID3D11Buffer* pVertexBuffer, UINT numVertices, I
 
 void FRenderer::RenderPrimitive(OBJ::FStaticMeshRenderData* renderData, TArray<FStaticMaterial*> materials, TArray<UMaterial*> overrideMaterial, int selectedSubMeshIndex = -1) const
 {
+    // --- 원래 코드 --- 
     UINT offset = 0;
     Graphics->DeviceContext->IASetVertexBuffers(0, 1, &renderData->VertexBuffer, &Stride, &offset);
     if (renderData->IndexBuffer)
@@ -755,29 +793,52 @@ void FRenderer::RenderPrimitive(OBJ::FStaticMeshRenderData* renderData, TArray<F
     // submesh X
     if (renderData->MaterialSubsets.Num() == 0)
     {
-        Graphics->DeviceContext->DrawIndexed(renderData->Indices.Num(), 0, 0);
+        // TODO: 이 경우 기본 Material 설정 로직 필요할 수 있음
+        // 예: UpdateMaterial(DefaultMaterialInfo); 
+        UE_LOG(LogLevel::Warning, "RenderPrimitive: Mesh has no submesh/material subset.");
+        // Graphics->DeviceContext->DrawIndexed(renderData->Indices.Num(), 0, 0); // 인덱스 수 확인 필요
     }
 
     // submesh O
     for (int subMeshIndex = 0; subMeshIndex < renderData->MaterialSubsets.Num(); subMeshIndex++)
     {
         int materialIndex = renderData->MaterialSubsets[subMeshIndex].MaterialIndex;
+        
+        // Material 인덱스 유효성 검사 (추가하면 좋음)
+        if (materialIndex < 0 || 
+            (overrideMaterial.Num() > 0 && materialIndex >= overrideMaterial.Num()) ||
+            (overrideMaterial.Num() == 0 && materialIndex >= materials.Num()))
+        {
+            UE_LOG(LogLevel::Error, "RenderPrimitive: Invalid material index %d for submesh %d", materialIndex, subMeshIndex);
+            continue; // 이 submesh 건너뛰기
+        }
 
         subMeshIndex == selectedSubMeshIndex ?
             ConstantBufferUpdater.UpdateSubMeshConstant(SubMeshConstantBuffer, true)
             : ConstantBufferUpdater.UpdateSubMeshConstant(SubMeshConstantBuffer, false);
 
-        overrideMaterial[materialIndex] != nullptr ?
-            UpdateMaterial(overrideMaterial[materialIndex]->GetMaterialInfo())
-            : UpdateMaterial(materials[materialIndex]->Material->GetMaterialInfo());
-
-        //UpdateMaterial(materials[materialIndex]->Material->GetMaterialInfo());
+        // Material 설정
+        UMaterial* materialToUse = (overrideMaterial.Num() > 0 && overrideMaterial[materialIndex] != nullptr) ? 
+                                     overrideMaterial[materialIndex] : 
+                                     materials[materialIndex]->Material;
+        
+        if (materialToUse)
+        {
+            UpdateMaterial(materialToUse->GetMaterialInfo());
+        }
+        else
+        {
+            UE_LOG(LogLevel::Warning, "RenderPrimitive: Null material found for submesh %d (material index %d)", subMeshIndex, materialIndex);
+            // TODO: 기본 재질 사용 또는 건너뛰기 처리?
+            continue;
+        }
 
         if (renderData->IndexBuffer)
         {
             // index draw
             uint64 startIndex = renderData->MaterialSubsets[subMeshIndex].IndexStart;
             uint64 indexCount = renderData->MaterialSubsets[subMeshIndex].IndexCount;
+            
             Graphics->DeviceContext->DrawIndexed(indexCount, startIndex, 0);
         }
     }
@@ -848,9 +909,9 @@ void FRenderer::RenderTexturedModelPrimitive(
 void FRenderer::RenderStaticMeshes()
 {
 #if USE_GBUFFER
-    PrepareShader();
+    PrepareShader(); // GBuffer 파이프라인 준비
 #else
-    PrepareUberShader();
+    PrepareUberShader();  // <<< UberShader 사용으로 복원
 #endif
 
     for (UStaticMeshComponent* StaticMeshComp : StaticMeshObjs)
@@ -861,8 +922,6 @@ void FRenderer::RenderStaticMeshes()
             StaticMeshComp->GetWorldScale()
         );
 
-        
-        
         FObjectMatrixConstants MatrixConstant =
         {
             .World = Model,

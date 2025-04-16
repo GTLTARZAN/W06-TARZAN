@@ -29,6 +29,25 @@ cbuffer cbPerFrame : register(b1)
     uint    uMaxNumLightsPerTile    : packoffset(c9.w);
 };
 
+// --- 추가: Material 상수 버퍼 (b3) ---
+// FMaterialInfo 구조체 정의가 다른 곳에 있다고 가정
+struct FMaterialInfo // TODO: 실제 구조체 정의 확인 및 필요시 여기에 복사
+{
+    float3 DiffuseColor;
+    float TransparencyScalar;
+    float3 AmbientColor;
+    float DensityScalar;
+    float3 SpecularColor;
+    float SpecularScalar;
+    float3 EmmisiveColor;
+    float MaterialPad0;
+};
+
+cbuffer MaterialConstant : register(b3)
+{
+    FMaterialInfo Material;
+};
+
 //--------------------------------------------------------------------------------------
 // Miscellaneous constants
 //--------------------------------------------------------------------------------------

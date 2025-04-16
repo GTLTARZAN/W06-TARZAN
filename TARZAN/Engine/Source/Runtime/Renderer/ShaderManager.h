@@ -54,14 +54,14 @@ public:
         ID3D11PixelShader* backUpPS,
         ELightingModel lightingModel = ELightingModel::None);
 
-    // 매크로를 직접 전달받는 CreatePixelShader 오버로드 추가
+    // --- 새로 추가: 매크로를 직접 전달받는 CreatePixelShader 오버로드 ---
     bool CreatePixelShader(
         const FWString& psPath,
         const FString& psEntry,
         ID3D11PixelShader*& outPS,
-        const D3D_SHADER_MACRO* pDefines); // 매크로 인자 추가
+        const D3D_SHADER_MACRO* pDefines) const;
 
-    // 기존 CreatePixelShader
+    // 기존 CreatePixelShader (ELightingModel 사용)
     bool CreatePixelShader(
         const FWString& psPath,
         const FString& psEntry,

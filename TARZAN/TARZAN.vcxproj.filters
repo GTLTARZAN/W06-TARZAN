@@ -204,12 +204,6 @@
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\CubeComp.h">
       <Filter>Engine\Source\Runtime\Engine\Classes\Components</Filter>
     </ClInclude>
-    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\LightComponent.cpp">
-      <Filter>Engine\Source\Runtime\Engine\Classes\Components</Filter>
-    </ClCompile>
-    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\LightComponent.h">
-      <Filter>Engine\Source\Runtime\Engine\Classes\Components</Filter>
-    </ClInclude>
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\PrimitiveComponent.cpp">
       <Filter>Engine\Source\Runtime\Engine\Classes\Components</Filter>
     </ClCompile>
@@ -445,11 +439,12 @@
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\Movement\MovementComponent.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\Movement\ProjectileMovementComponent.h" />
     <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\Movement\RotatingMovementComponent.h" />
-    <ClInclude Include="SpotLightComp.h" />
     <ClInclude Include="Engine\Source\Runtime\CoreUObject\UObject\UObjectGlobals.h" />
     <ClInclude Include="Engine\Source\Runtime\Sound\SoundManager.h">
       <Filter>Engine\Source\Runtime\Sound</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\Light\LightComponent.h" />
+    <ClInclude Include="Engine\Source\Runtime\Engine\Classes\Components\Light\SpotLightComponent.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Engine\Source\ThirdParty\DirectXTK\Include\DDSTextureLoader.h" />
@@ -551,7 +546,11 @@
     <FxCompile Include="Shaders\GizmoPixelShader.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\UberLit.hlsl" />
+    <FxCompile Include="Shaders\ForwardPlus\ForwardPlusCommon.hlsl" />
+    <FxCompile Include="Shaders\ForwadPlus\ForwardPlusDebufDraw.hlsl" />
+    <FxCompile Include="Shaders\ForwardPlus\ForwardPlusTiling.hlsl" />
+    <FxCompile Include="Shaders\ForwadPlus\ForwardPluss.hlsl" />
+    <FxCompile Include="Shaders\Uber.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="TARZAN.natvis" />
@@ -582,10 +581,11 @@
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\Movement\MovementComponent.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\Movement\ProjectileMovementComponent.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\Movement\RotatingMovementComponent.cpp" />
-    <ClCompile Include="SpotLightComp.cpp" />
     <ClCompile Include="Engine\Source\Runtime\CoreUObject\UObject\UObjectGlobals.cpp" />
     <ClCompile Include="Engine\Source\Runtime\Sound\SoundManager.cpp">
       <Filter>Engine\Source\Runtime\Sound</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\Light\LightComponent.cpp" />
+    <ClCompile Include="Engine\Source\Runtime\Engine\Classes\Components\Light\SpotLightComponent.cpp" />
   </ItemGroup>
 </Project>

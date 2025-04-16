@@ -40,10 +40,11 @@ struct VS_INPUT_SCENE
 struct VS_OUTPUT_SCENE
 {
     float4 Position     : SV_POSITION; // vertex position
-    float3 Normal       : NORMAL;      // vertex normal vector
-    float2 TextureUV    : TEXCOORD0;   // vertex texture coords
-    float3 Tangent      : TEXCOORD1;   // vertex tangent vector
-    float3 PositionWS   : TEXCOORD2;   // vertex position (world space)
+    float4 Color        : COLOR0;
+    float3 Tangent      : TANGENT;     // vertex tangent vector
+    float3 PositionWS   : TEXCOORD0;   // vertex position (world space)
+    float3 Normal       : TEXCOORD1;   // vertex normal vector
+    float2 TextureUV    : TEXCOORD2;   // vertex texture coords
 };
 
 struct VS_OUTPUT_POSITION_ONLY
@@ -135,7 +136,7 @@ float4 RenderScenePS(VS_OUTPUT_SCENE Input) : SV_TARGET
 #if ( USE_ALPHA_TEST == 1 )
     float fSpecMask = 0.0f;
     float fAlpha = DiffuseTex.a;
-    if (fAlpha < g_fAlphaTest) discard;
+    if (fAlpha < fAlphaTest) discard;
 #else
     float fSpecMask = DiffuseTex.a;
 #endif
@@ -152,16 +153,15 @@ float4 RenderScenePS(VS_OUTPUT_SCENE Input) : SV_TARGET
 
     float3 vViewDir = normalize(CameraPos - vPositionWS);
 
+    // Point Light 루프 (주석 해제)
 #if ( USE_LIGHT_CULLING == 1 )
     uint nTileIndex = GetTileIndex(Input.Position.xy);
-    uint nIndex = g_uMaxNumLightsPerTile * nTileIndex;
-    uint nNextLightIndex = g_PerTileLightIndexBuffer[nIndex];
+    uint nIndex = uMaxNumLightsPerTile * nTileIndex;
+    uint nNextLightIndex = PerTileLightIndexBuffer[nIndex];
 #else
     uint nIndex;
     uint nNumPointLights = uNumLights & 0xFFFFu;
 #endif
-
-    // loop over the point lights
 
     [loop]
 #if ( USE_LIGHT_CULLING == 1 )
@@ -170,13 +170,7 @@ float4 RenderScenePS(VS_OUTPUT_SCENE Input) : SV_TARGET
     for (nIndex = 0; nIndex < nNumPointLights; nIndex++)
 #endif
     {
-#if ( USE_LIGHT_CULLING == 1 )
-        uint nLightIndex = nNextLightIndex;
-        nIndex++;
-        nNextLightIndex = g_PerTileLightIndexBuffer[nIndex];
-#else
         uint nLightIndex = nIndex;
-#endif
         float4 CenterAndRadius = PointLightBufferCenterAndRadius[nLightIndex];
 
         float3 vToLight = CenterAndRadius.xyz - vPositionWS.xyz;
@@ -204,15 +198,14 @@ float4 RenderScenePS(VS_OUTPUT_SCENE Input) : SV_TARGET
         AccumSpecular += LightColorSpecular;
     }
 
+    // Spot Light 루프 (주석 해제)
 #if ( USE_LIGHT_CULLING == 1 )
     // move past the first sentinel to get to the spot lights
     nIndex++;
-    nNextLightIndex = g_PerTileLightIndexBuffer[nIndex];
+    nNextLightIndex = PerTileLightIndexBuffer[nIndex];
 #else
     uint nNumSpotLights = (uNumLights & 0xFFFF0000u) >> 16;
 #endif
-
-    // loop over the spot lights
 
     [loop]
 #if ( USE_LIGHT_CULLING == 1 )
@@ -221,13 +214,7 @@ float4 RenderScenePS(VS_OUTPUT_SCENE Input) : SV_TARGET
     for (nIndex = 0; nIndex < nNumSpotLights; nIndex++)
 #endif
     {
-#if ( USE_LIGHT_CULLING == 1 )
-        uint nLightIndex = nNextLightIndex;
-        nIndex++;
-        nNextLightIndex = g_PerTileLightIndexBuffer[nIndex];
-#else
         uint nLightIndex = nIndex;
-#endif
         float4 BoundingSphereCenterAndRadius = SpotLightBufferCenterAndRadius[nLightIndex];
         float4 SpotParams = SpotLightBufferSpotParams[nLightIndex];
 
@@ -273,15 +260,16 @@ float4 RenderScenePS(VS_OUTPUT_SCENE Input) : SV_TARGET
         AccumSpecular += LightColorSpecular;
     }
 
-    // pump up the lights
+    // pump up the lights (주석 해제)
     AccumDiffuse *= 2;
     AccumSpecular *= 8;
 
-    // This is a poor man's ambient cubemap (blend between an up color and a down color)
-    float fAmbientBlend = 0.5f * vNorm.y + 0.5;
-    float3 Ambient = MaterialAmbientColorUp.rgb * fAmbientBlend + MaterialAmbientColorDown.rgb * (1 - fAmbientBlend);
+    // Ambient 계산 (cbPerObject(b0) 대신 MaterialConstantBuffer(b3) 사용)
+    // float fAmbientBlend = 0.5f * vNorm.y + 0.5; // 기존 블렌딩 계산 (필요하면 유지)
+    // float3 Ambient = MaterialAmbientColorUp.rgb * fAmbientBlend + MaterialAmbientColorDown.rgb * (1 - fAmbientBlend); // 기존 계산 주석 처리
+    float3 Ambient = Material.AmbientColor.rgb; // <<< MaterialConstant (b3)의 AmbientColor 사용
 
-    // modulate mesh texture with lighting
+    // modulate mesh texture with lighting (원래 코드로 복원)
     float3 DiffuseAndAmbient = AccumDiffuse + Ambient;
     return float4(DiffuseTex.xyz * (DiffuseAndAmbient + AccumSpecular * fSpecMask),1);
 }
