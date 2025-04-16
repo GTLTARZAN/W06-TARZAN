@@ -423,6 +423,11 @@ void ControlEditorPanel::CreateModifyButton(ImVec2 ButtonSize, ImFont* IconFont)
                     break;
                 }
 
+                if (TempActor)
+                {
+                    SpawnedActor = TempActor;
+                }
+
                 if (SpawnedActor)
                 {
                     World->SetPickedActor(SpawnedActor);

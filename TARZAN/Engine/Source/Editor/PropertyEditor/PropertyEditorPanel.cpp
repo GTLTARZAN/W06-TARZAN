@@ -32,10 +32,10 @@ void PropertyEditorPanel::Render()
 
     ImVec2 MinSize(140, 370);
     ImVec2 MaxSize(FLT_MAX, 900);
-    
+
     /* Min, Max Size */
     ImGui::SetNextWindowSizeConstraints(MinSize, MaxSize);
-    
+
     /* Panel Position */
     ImGui::SetNextWindowPos(ImVec2(PanelPosX, PanelPosY), ImGuiCond_Always);
 
@@ -47,7 +47,7 @@ void PropertyEditorPanel::Render()
 
     /* Render Start */
     ImGui::Begin("Detail", nullptr, PanelFlags);
-    
+
     AEditorPlayer* player = GEngine->GetWorld()->GetEditorPlayer();
     AActor* PickedActor = GEngine->GetWorld()->GetSelectedActor();
 
@@ -64,15 +64,12 @@ void PropertyEditorPanel::Render()
                     if (SceneComp->GetAttachParent() == nullptr)
                     {
                         DrawSceneComponentTree(SceneComp, PickedComponent);
-                        
                     }
-                    
                 }
-
             }
 
             ImGui::Separator();
-            
+
             for (UActorComponent* Component : AllComponents)
             {
                 if (!Component->IsA<USceneComponent>())
@@ -115,7 +112,7 @@ void PropertyEditorPanel::Render()
                     TextComponent->SetRowColumnCount(106, 106);
                     TextComponent->SetText(L"안녕하세요 Jungle");
                 }
-                if (ImGui::Selectable("BillboardComponent"))    
+                if (ImGui::Selectable("BillboardComponent"))
                 {
                     UBillboardComponent* BillboardComponent = PickedActor->AddComponent<UBillboardComponent>();
                     PickedComponent = BillboardComponent;
@@ -203,6 +200,7 @@ void PropertyEditorPanel::Render()
     // TODO: 추후에 RTTI를 이용해서 프로퍼티 출력하기
     if (PickedActor && PickedComponent && PickedComponent->IsA<USceneComponent>())
     {
+        PickedComponent = PickedActor->GetRootComponent();
         USceneComponent* SceneComp = Cast<USceneComponent>(PickedComponent);
         ImGui::SetItemDefaultFocus();
         // TreeNode 배경색을 변경 (기본 상태)
@@ -241,7 +239,7 @@ void PropertyEditorPanel::Render()
                 coordiButtonLabel = "World";
             else if (player->GetCoordiMode() == CoordiMode::CDM_LOCAL)
                 coordiButtonLabel = "Local";
-            
+
             if (ImGui::Button(coordiButtonLabel.c_str(), ImVec2(ImGui::GetWindowContentRegionMax().x * 0.9f, 32)))
             {
                 player->AddCoordiMode();
@@ -251,7 +249,7 @@ void PropertyEditorPanel::Render()
         ImGui::PopStyleColor();
         bFirstFrame = false;
     }
-    
+
     if (PickedActor && PickedComponent && PickedComponent->IsA<UMovementComponent>())
     {
         UMovementComponent* SceneComp = Cast<UMovementComponent>(PickedComponent);
@@ -268,7 +266,7 @@ void PropertyEditorPanel::Render()
 
             Velocity = SceneComp->GetVelocity();
             Speed = SceneComp->GetSpeed();
-        
+
             bool bChanged = false;
             bChanged |= FImGuiWidget::DrawVec3Control("Velocity", Velocity, 0, 10);
             ImGui::Spacing();
@@ -280,11 +278,123 @@ void PropertyEditorPanel::Render()
                 SceneComp->SetVelocity(Velocity);
                 SceneComp->SetSpeed(Speed);
             }
-        
+
             ImGui::TreePop(); // 트리 닫기
         }
         ImGui::PopStyleColor();
         bFirstFrame = false;
+    }
+
+    if (PickedActor && PickedComponent && (PickedComponent->IsA<UDirectionalLightComponent>() || PickedComponent->IsA<UAmbientLightComponent>()))
+    {
+        const TSet<UActorComponent*>& AllComponents = PickedActor->GetComponents();
+
+        for (UActorComponent* Comp : AllComponents)
+        {
+            if (UDirectionalLightComponent* DirLight = Cast<UDirectionalLightComponent>(Comp))
+            {
+                FLinearColor color = DirLight->GetColor();
+                float r = color.R, g = color.G, b = color.B, a = color.A;
+                float h, s, v;
+                RGBToHSV(r, g, b, h, s, v);
+                float colorArr[4] = { r, g, b, a };
+
+                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+                if (ImGui::TreeNodeEx("Directional Light", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (ImGui::ColorEdit4("Color##Dir", colorArr)) {
+                        DirLight->SetColor(FLinearColor(colorArr[0], colorArr[1], colorArr[2], colorArr[3]));
+                    }
+
+                    bool changedRGB = false, changedHSV = false;
+                    ImGui::PushItemWidth(50.0f);
+                    if (ImGui::DragFloat("R##Dir", &r, 0.001f, 0.f, 1.f)) changedRGB = true;
+                    ImGui::SameLine();
+                    if (ImGui::DragFloat("G##Dir", &g, 0.001f, 0.f, 1.f)) changedRGB = true;
+                    ImGui::SameLine();
+                    if (ImGui::DragFloat("B##Dir", &b, 0.001f, 0.f, 1.f)) changedRGB = true;
+                    ImGui::Spacing();
+                    if (ImGui::DragFloat("H##Dir", &h, 0.1f, 0.f, 360)) changedHSV = true;
+                    ImGui::SameLine();
+                    if (ImGui::DragFloat("S##Dir", &s, 0.001f, 0.f, 1)) changedHSV = true;
+                    ImGui::SameLine();
+                    if (ImGui::DragFloat("V##Dir", &v, 0.001f, 0.f, 1)) changedHSV = true;
+                    ImGui::PopItemWidth();
+
+                    if (changedRGB && !changedHSV)
+                    {
+                        RGBToHSV(r, g, b, h, s, v);
+                        DirLight->SetColor(FLinearColor(r, g, b, a));
+                    }
+                    else if (changedHSV && !changedRGB)
+                    {
+                        HSVToRGB(h, s, v, r, g, b);
+                        DirLight->SetColor(FLinearColor(r, g, b, a));
+                    }
+
+                    float Intensity = DirLight->GetIntensity();
+                    if (ImGui::DragFloat("Intensity##Dir", &Intensity, 0.1f, 0.0f, 100.0f))
+                    {
+                        DirLight->SetIntensity(Intensity);
+                    }
+
+                    ImGui::TreePop();
+                }
+                ImGui::PopStyleColor();
+            }
+
+            if (UAmbientLightComponent* AmbLight = Cast<UAmbientLightComponent>(Comp))
+            {
+                FLinearColor color = AmbLight->GetColor();
+                float r = color.R, g = color.G, b = color.B, a = color.A;
+                float h, s, v;
+                RGBToHSV(r, g, b, h, s, v);
+                float colorArr[4] = { r, g, b, a };
+
+                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+                if (ImGui::TreeNodeEx("Ambient Light", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    if (ImGui::ColorEdit4("Color##Amb", colorArr)) {
+                        AmbLight->SetColor(FLinearColor(colorArr[0], colorArr[1], colorArr[2], colorArr[3]));
+                    }
+
+                    bool changedRGB = false, changedHSV = false;
+                    ImGui::PushItemWidth(50.0f);
+                    if (ImGui::DragFloat("R##Amb", &r, 0.001f, 0.f, 1.f)) changedRGB = true;
+                    ImGui::SameLine();
+                    if (ImGui::DragFloat("G##Amb", &g, 0.001f, 0.f, 1.f)) changedRGB = true;
+                    ImGui::SameLine();
+                    if (ImGui::DragFloat("B##Amb", &b, 0.001f, 0.f, 1.f)) changedRGB = true;
+                    ImGui::Spacing();
+                    if (ImGui::DragFloat("H##Amb", &h, 0.1f, 0.f, 360)) changedHSV = true;
+                    ImGui::SameLine();
+                    if (ImGui::DragFloat("S##Amb", &s, 0.001f, 0.f, 1)) changedHSV = true;
+                    ImGui::SameLine();
+                    if (ImGui::DragFloat("V##Amb", &v, 0.001f, 0.f, 1)) changedHSV = true;
+                    ImGui::PopItemWidth();
+
+                    if (changedRGB && !changedHSV)
+                    {
+                        RGBToHSV(r, g, b, h, s, v);
+                        AmbLight->SetColor(FLinearColor(r, g, b, a));
+                    }
+                    else if (changedHSV && !changedRGB)
+                    {
+                        HSVToRGB(h, s, v, r, g, b);
+                        AmbLight->SetColor(FLinearColor(r, g, b, a));
+                    }
+
+                    float Intensity = AmbLight->GetIntensity();
+                    if (ImGui::DragFloat("Intensity##Amb", &Intensity, 0.1f, 0.0f, 100.0f))
+                    {
+                        AmbLight->SetIntensity(Intensity);
+                    }
+
+                    ImGui::TreePop();
+                }
+                ImGui::PopStyleColor();
+            }
+        }
     }
 
     if (PickedActor && PickedComponent && PickedComponent->IsA<USpotLightComponent>())
@@ -331,7 +441,7 @@ void PropertyEditorPanel::Render()
             ImGui::SameLine();
             if (ImGui::DragFloat("B##B", &B, 0.001f, 0.f, 1.f)) bChangedRGB = true;
             ImGui::Spacing();
-            
+
             // HSV
             if (ImGui::DragFloat("H##H", &H, 0.1f, 0.f, 360)) bChangedHSV = true;
             ImGui::SameLine();
@@ -340,7 +450,7 @@ void PropertyEditorPanel::Render()
             if (ImGui::DragFloat("V##V", &V, 0.001f, 0.f, 1)) bChangedHSV = true;
             ImGui::PopItemWidth();
             ImGui::Spacing();
-            
+
             if (bChangedRGB && !bChangedHSV)
             {
                 // RGB -> HSV
@@ -422,7 +532,7 @@ void PropertyEditorPanel::Render()
             FLinearColor currColor;
             if (FogObj)
                 currColor = FogObj->GetColor();
-           
+
             float r = currColor.R;
             float g = currColor.G;
             float b = currColor.B;
@@ -442,10 +552,10 @@ void PropertyEditorPanel::Render()
                 g = lightColor[1];
                 b = lightColor[2];
                 a = lightColor[3];
-               
-                
+
+
                 FogObj->SetColor(FLinearColor(r, g, b, a));
-               
+
 
             }
             RGBToHSV(r, g, b, h, s, v);
@@ -557,11 +667,11 @@ void PropertyEditorPanel::Render()
 
     // TODO: 추후에 RTTI를 이용해서 프로퍼티 출력하기
     if (PickedActor)
-    if (UStaticMeshComponent* StaticMeshComponent = PickedActor->GetComponentByClass<UStaticMeshComponent>())
-    {
-        RenderForStaticMesh(StaticMeshComponent);
-        RenderForMaterial(StaticMeshComponent);
-    }
+        if (UStaticMeshComponent* StaticMeshComponent = PickedActor->GetComponentByClass<UStaticMeshComponent>())
+        {
+            RenderForStaticMesh(StaticMeshComponent);
+            RenderForMaterial(StaticMeshComponent);
+        }
 
     if (PickedActor && PickedComponent && PickedComponent->IsA<UBillboardComponent>())
     {
@@ -593,39 +703,37 @@ void PropertyEditorPanel::Render()
 
     }
     ImGui::End();
-
-
 }
 
 void PropertyEditorPanel::DrawSceneComponentTree(USceneComponent* Component, UActorComponent*& PickedComponent)
 {
     if (!Component) return;
 
-   FString Label = *Component->GetName();
-   bool bSelected = (PickedComponent == Component);
+    FString Label = *Component->GetName();
+    bool bSelected = (PickedComponent == Component);
 
-   ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow;
-   if (bSelected)
-       nodeFlags |= ImGuiTreeNodeFlags_Selected;
+    ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow;
+    if (bSelected)
+        nodeFlags |= ImGuiTreeNodeFlags_Selected;
 
-   // 노드를 클릭 가능한 셀렉션으로 표시
-   bool bOpened = ImGui::TreeNodeEx(*Label, nodeFlags);
+    // 노드를 클릭 가능한 셀렉션으로 표시
+    bool bOpened = ImGui::TreeNodeEx(*Label, nodeFlags);
 
-   // 클릭되었을 때 선택 갱신
-   if (ImGui::IsItemClicked())
-   {
-       PickedComponent = Component;
-   }
+    // 클릭되었을 때 선택 갱신
+    if (ImGui::IsItemClicked())
+    {
+        PickedComponent = Component;
+    }
 
-   // 자식 재귀 호출
-   if (bOpened)
-   {
-       for (USceneComponent* Child : Component->GetAttachChildren())
-       {
-           DrawSceneComponentTree(Child, PickedComponent);
-       }
-       ImGui::TreePop();
-   }
+    // 자식 재귀 호출
+    if (bOpened)
+    {
+        for (USceneComponent* Child : Component->GetAttachChildren())
+        {
+            DrawSceneComponentTree(Child, PickedComponent);
+        }
+        ImGui::TreePop();
+    }
 }
 
 void PropertyEditorPanel::RGBToHSV(float r, float g, float b, float& h, float& s, float& v) const
@@ -689,7 +797,7 @@ void PropertyEditorPanel::RenderForStaticMesh(UStaticMeshComponent* StaticMeshCo
     {
         return;
     }
-    
+
     ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
     if (ImGui::TreeNodeEx("Static Mesh", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
     {
@@ -710,7 +818,7 @@ void PropertyEditorPanel::RenderForStaticMesh(UStaticMeshComponent* StaticMeshCo
 
             ImGui::EndCombo();
         }
-        
+
         ImGui::TreePop();
     }
     ImGui::PopStyleColor();
@@ -723,7 +831,7 @@ void PropertyEditorPanel::RenderForMaterial(UStaticMeshComponent* StaticMeshComp
     {
         return;
     }
-    
+
     ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
     if (ImGui::TreeNodeEx("Materials", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) // 트리 노드 생성
     {
@@ -743,7 +851,7 @@ void PropertyEditorPanel::RenderForMaterial(UStaticMeshComponent* StaticMeshComp
         if (ImGui::Button("    +    ")) {
             IsCreateMaterial = true;
         }
-        
+
         ImGui::TreePop();
     }
 
@@ -789,7 +897,7 @@ void PropertyEditorPanel::RenderMaterialView(UMaterial* Material)
     ImGui::Begin("Material Viewer", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoNav);
 
     static ImGuiSelectableFlags BaseFlag = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_None | ImGuiColorEditFlags_NoAlpha;
-    
+
     FVector MatDiffuseColor = Material->GetMaterialInfo().Diffuse;
     FVector MatSpecularColor = Material->GetMaterialInfo().Specular;
     FVector MatAmbientColor = Material->GetMaterialInfo().Ambient;
@@ -860,10 +968,10 @@ void PropertyEditorPanel::RenderMaterialView(UMaterial* Material)
 
     ImGui::Spacing();
     ImGui::Separator();
-    
+
     ImGui::Text("Choose Material");
     ImGui::Spacing();
-    
+
     ImGui::Text("Material Slot Name |");
     ImGui::SameLine();
     ImGui::Text(GetData(SelectedStaticMeshComp->GetMaterialSlotNames()[SelectedMaterialIndex].ToString()));
@@ -885,13 +993,13 @@ void PropertyEditorPanel::RenderMaterialView(UMaterial* Material)
         UMaterial* material = FManagerOBJ::GetMaterial(materialChars[CurMaterialIndex]);
         SelectedStaticMeshComp->SetMaterial(SelectedMaterialIndex, material);
     }
-    
+
     if (ImGui::Button("Close"))
     {
         SelectedMaterialIndex = -1;
         SelectedStaticMeshComp = nullptr;
     }
-     
+
     ImGui::End();
 }
 

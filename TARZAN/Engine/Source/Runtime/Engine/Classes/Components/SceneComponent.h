@@ -47,10 +47,7 @@ public:
     void SetScale(FVector _newScale) { RelativeScale3D = _newScale; }
     void SetupAttachment(USceneComponent* InParent);
 
-
-    
 public:
-
     USceneComponent* GetAttachParent() const;
     void SetAttachParent(USceneComponent* InParent);
     TArray<USceneComponent*> GetAttachChildren() const { return AttachChildren; }
