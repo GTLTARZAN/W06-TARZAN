@@ -201,7 +201,7 @@ HRESULT FResourceMgr::LoadTextureFromFile(ID3D11Device* device, ID3D11DeviceCont
 	textureDesc.Height = height;
 	textureDesc.MipLevels = 1;
 	textureDesc.ArraySize = 1;
-	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	textureDesc.SampleDesc.Count = 1;
 	textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
 	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
