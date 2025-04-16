@@ -1,0 +1,267 @@
+{
+    "Actors": [
+        {
+            "ActorClass": "AStaticMeshActor",
+            "ActorID": "AStaticMeshActor_77",
+            "ActorLabel": "OBJ_SPHERE_76",
+            "Components": [
+                {
+                    "ComponentClass": "UStaticMeshComponent",
+                    "ComponentID": "StaticMeshComponent_0",
+                    "Properties": {
+                        "AABB_max": "X=0.999999 Y=0.999999 Z=1.000000",
+                        "AABB_min": "X=-0.999999 Y=-1.000000 Z=-1.000000",
+                        "AttachParentID": "nullptr",
+                        "ComponentClass": "UStaticMeshComponent",
+                        "ComponentName": "StaticMeshComponent_0",
+                        "ComponentOwner": "AStaticMeshActor_77",
+                        "ComponentOwnerClass": "AStaticMeshActor",
+                        "QuatRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeLocation": "X=20.000000 Y=0.000000 Z=0.000000",
+                        "RelativeRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeScale": "X=5.000000 Y=5.000000 Z=5.000000",
+                        "StaticMeshPath": "Assets/Sphere.obj",
+                        "bAutoActive": "false",
+                        "bCanEverTick": "false",
+                        "bIsActive": "false",
+                        "bTickEnabled": "true",
+                        "m_Type": ""
+                    }
+                }
+            ],
+            "RootComponentID": "StaticMeshComponent_0"
+        },
+        {
+            "ActorClass": "AStaticMeshActor",
+            "ActorID": "AStaticMeshActor_70",
+            "ActorLabel": "OBJ_SPHERE_69",
+            "Components": [
+                {
+                    "ComponentClass": "UStaticMeshComponent",
+                    "ComponentID": "StaticMeshComponent_0",
+                    "Properties": {
+                        "AABB_max": "X=0.999999 Y=0.999999 Z=1.000000",
+                        "AABB_min": "X=-0.999999 Y=-1.000000 Z=-1.000000",
+                        "AttachParentID": "nullptr",
+                        "ComponentClass": "UStaticMeshComponent",
+                        "ComponentName": "StaticMeshComponent_0",
+                        "ComponentOwner": "AStaticMeshActor_70",
+                        "ComponentOwnerClass": "AStaticMeshActor",
+                        "QuatRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeLocation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeScale": "X=5.000000 Y=5.000000 Z=5.000000",
+                        "StaticMeshPath": "Assets/Sphere.obj",
+                        "bAutoActive": "false",
+                        "bCanEverTick": "false",
+                        "bIsActive": "false",
+                        "bTickEnabled": "true",
+                        "m_Type": ""
+                    }
+                }
+            ],
+            "RootComponentID": "StaticMeshComponent_0"
+        },
+        {
+            "ActorClass": "AActor",
+            "ActorID": "AActor_63",
+            "ActorLabel": "DirectionalLight_62",
+            "Components": [
+                {
+                    "ComponentClass": "UDirectionalLightComponent",
+                    "ComponentID": "UDirectionalLightComponent_65",
+                    "Properties": {
+                        "AttachParentID": "nullptr",
+                        "ComponentClass": "UDirectionalLightComponent",
+                        "ComponentName": "UDirectionalLightComponent_65",
+                        "ComponentOwner": "AActor_63",
+                        "ComponentOwnerClass": "AActor",
+                        "Intensity": "1.000000",
+                        "LightColor": "R=0.938224 G=0.861844 B=0.478168 A=1.000000",
+                        "QuatRotation": "X=0.000000 Y=0.382683 Z=0.000000",
+                        "RelativeLocation": "X=0.000000 Y=0.000000 Z=16.354980",
+                        "RelativeRotation": "X=0.000000 Y=45.000000 Z=0.000000",
+                        "RelativeScale": "X=1.000000 Y=1.000000 Z=1.000000",
+                        "bAutoActive": "false",
+                        "bCanEverTick": "false",
+                        "bIsActive": "false",
+                        "bTickEnabled": "true",
+                        "bVisible": "true"
+                    }
+                },
+                {
+                    "ComponentClass": "UBillboardComponent",
+                    "ComponentID": "Icon",
+                    "Properties": {
+                        "AABB_max": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "AABB_min": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "AttachParentID": "UDirectionalLightComponent_65",
+                        "ComponentClass": "UBillboardComponent",
+                        "ComponentName": "Icon",
+                        "ComponentOwner": "AActor_63",
+                        "ComponentOwnerClass": "AActor",
+                        "FinalIndexU": "0.000000",
+                        "FinalIndexV": "0.000000",
+                        "QuatRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeLocation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeScale": "X=1.000000 Y=1.000000 Z=1.000000",
+                        "TexturePath": "Engine/Icon/DirectionalLight_64x.png",
+                        "TintColor": "R=0.938224 G=0.861844 B=0.478168 A=1.000000",
+                        "bAutoActive": "false",
+                        "bCanEverTick": "false",
+                        "bIsActive": "false",
+                        "bIsLightIcon": "true",
+                        "bTickEnabled": "true",
+                        "m_Type": "UBillboardComponent"
+                    }
+                },
+                {
+                    "ComponentClass": "UAmbientLightComponent",
+                    "ComponentID": "UAmbientLightComponent_68",
+                    "Properties": {
+                        "AttachParentID": "UDirectionalLightComponent_65",
+                        "ComponentClass": "UAmbientLightComponent",
+                        "ComponentName": "UAmbientLightComponent_68",
+                        "ComponentOwner": "AActor_63",
+                        "ComponentOwnerClass": "AActor",
+                        "Intensity": "1.000000",
+                        "LightColor": "R=0.100000 G=0.100000 B=0.100000 A=1.000000",
+                        "QuatRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeLocation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeScale": "X=1.000000 Y=1.000000 Z=1.000000",
+                        "bAutoActive": "false",
+                        "bCanEverTick": "false",
+                        "bIsActive": "false",
+                        "bTickEnabled": "true",
+                        "bVisible": "true"
+                    }
+                }
+            ],
+            "RootComponentID": "UDirectionalLightComponent_65"
+        },
+        {
+            "ActorClass": "AActor",
+            "ActorID": "AActor_80",
+            "ActorLabel": "OBJ_PointLight_79",
+            "Components": [
+                {
+                    "ComponentClass": "UPointLightComponent",
+                    "ComponentID": "UPointLightComponent_82",
+                    "Properties": {
+                        "AttachParentID": "nullptr",
+                        "ComponentClass": "UPointLightComponent",
+                        "ComponentName": "UPointLightComponent_82",
+                        "ComponentOwner": "AActor_80",
+                        "ComponentOwnerClass": "AActor",
+                        "Intensity": "2.200000",
+                        "LightColor": "R=0.097673 G=0.903475 B=0.670135 A=1.000000",
+                        "LightFalloffExponent": "2.000000",
+                        "QuatRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "Radius": "13.000000",
+                        "RelativeLocation": "X=10.000000 Y=0.000000 Z=0.000000",
+                        "RelativeRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeScale": "X=1.000000 Y=1.000000 Z=1.000000",
+                        "bAutoActive": "false",
+                        "bCanEverTick": "false",
+                        "bIsActive": "false",
+                        "bTickEnabled": "true",
+                        "bVisible": "true"
+                    }
+                },
+                {
+                    "ComponentClass": "UBillboardComponent",
+                    "ComponentID": "Icon",
+                    "Properties": {
+                        "AABB_max": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "AABB_min": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "AttachParentID": "UPointLightComponent_82",
+                        "ComponentClass": "UBillboardComponent",
+                        "ComponentName": "Icon",
+                        "ComponentOwner": "AActor_80",
+                        "ComponentOwnerClass": "AActor",
+                        "FinalIndexU": "0.000000",
+                        "FinalIndexV": "0.000000",
+                        "QuatRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeLocation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeScale": "X=1.000000 Y=1.000000 Z=1.000000",
+                        "TexturePath": "Engine/Icon/PointLight_64x.png",
+                        "TintColor": "R=0.097673 G=0.903475 B=0.670135 A=1.000000",
+                        "bAutoActive": "false",
+                        "bCanEverTick": "false",
+                        "bIsActive": "false",
+                        "bIsLightIcon": "true",
+                        "bTickEnabled": "true",
+                        "m_Type": "UBillboardComponent"
+                    }
+                }
+            ],
+            "RootComponentID": "UPointLightComponent_82"
+        },
+        {
+            "ActorClass": "AActor",
+            "ActorID": "AActor_85",
+            "ActorLabel": "OBJ_SpotLight_84",
+            "Components": [
+                {
+                    "ComponentClass": "USpotLightComponent",
+                    "ComponentID": "USpotLightComponent_87",
+                    "Properties": {
+                        "AttachParentID": "nullptr",
+                        "ComponentClass": "USpotLightComponent",
+                        "ComponentName": "USpotLightComponent_87",
+                        "ComponentOwner": "AActor_85",
+                        "ComponentOwnerClass": "AActor",
+                        "InnerConeAngle": "6.000000",
+                        "Intensity": "1.000000",
+                        "LightColor": "R=0.939815 G=0.408873 B=0.108775 A=1.000000",
+                        "LightFalloffExponent": "2.000000",
+                        "OuterConeAngle": "24.500000",
+                        "QuatRotation": "X=0.000000 Y=0.000000 Z=-1.000000",
+                        "Radius": "21.000000",
+                        "RelativeLocation": "X=40.000000 Y=0.000000 Z=0.000000",
+                        "RelativeRotation": "X=0.000000 Y=0.000000 Z=-179.999939",
+                        "RelativeScale": "X=1.000000 Y=1.000000 Z=1.000000",
+                        "bAutoActive": "false",
+                        "bCanEverTick": "false",
+                        "bIsActive": "false",
+                        "bTickEnabled": "true",
+                        "bVisible": "true"
+                    }
+                },
+                {
+                    "ComponentClass": "UBillboardComponent",
+                    "ComponentID": "Icon",
+                    "Properties": {
+                        "AABB_max": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "AABB_min": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "AttachParentID": "USpotLightComponent_87",
+                        "ComponentClass": "UBillboardComponent",
+                        "ComponentName": "Icon",
+                        "ComponentOwner": "AActor_85",
+                        "ComponentOwnerClass": "AActor",
+                        "FinalIndexU": "0.000000",
+                        "FinalIndexV": "0.000000",
+                        "QuatRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeLocation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeScale": "X=1.000000 Y=1.000000 Z=1.000000",
+                        "TexturePath": "Engine/Icon/SpotLight_64x.png",
+                        "TintColor": "R=0.939815 G=0.408873 B=0.108775 A=1.000000",
+                        "bAutoActive": "false",
+                        "bCanEverTick": "false",
+                        "bIsActive": "false",
+                        "bIsLightIcon": "true",
+                        "bTickEnabled": "true",
+                        "m_Type": "UBillboardComponent"
+                    }
+                }
+            ],
+            "RootComponentID": "USpotLightComponent_87"
+        }
+    ],
+    "NextUUID": 0,
+    "Version": 1
+}

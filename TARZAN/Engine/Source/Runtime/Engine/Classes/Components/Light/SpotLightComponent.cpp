@@ -1,5 +1,7 @@
 #include "SpotLightComponent.h"
 #include "UObject/ObjectFactory.h"
+#include "Components/UBillboardComponent.h"
+#include "GameFramework/Actor.h"
 #include "Define.h"
 
 USpotLightComponent::USpotLightComponent()
@@ -22,6 +24,16 @@ USpotLightComponent::~USpotLightComponent()
 void USpotLightComponent::InitializeComponent()
 {
     Super::InitializeComponent();
+
+    AActor* OwnerActor = GetOwner();
+
+    if (!Texture2D && OwnerActor)
+    {
+        UBillboardComponent* Billboard = OwnerActor->AddComponent<UBillboardComponent>("Icon");
+        Billboard->SetTexture(GetDefaultIconPath());
+        Billboard->SetIsLightIcon(true);
+        SetTexture2D(Billboard);
+    }
 }
 
 void USpotLightComponent::TickComponent(float DeltaTime)
