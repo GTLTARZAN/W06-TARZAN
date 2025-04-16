@@ -80,6 +80,8 @@ void FRenderer::Render()
         RenderPass();
     }
 
+    CheckGenerateLightTree();
+
     ClearRenderArr();
     RenderImGui();
     GEngine->graphicDevice.SwapBuffer();
@@ -430,6 +432,7 @@ void FRenderer::PrepareLineShader() const
         Graphics->DeviceContext->VSSetShaderResources(3, 1, &pConeSRV);
         Graphics->DeviceContext->VSSetShaderResources(4, 1, &pOBBSRV);
         Graphics->DeviceContext->VSSetShaderResources(5, 1, &pCircleSRV);
+        Graphics->DeviceContext->VSSetShaderResources(6, 1, &pLineSRV);
     }
 }
 #pragma endregion Shader
@@ -740,9 +743,32 @@ void FRenderer::RenderStaticMeshes()
         FDirectionalLightInfo DirectionalLight;
         std::unique_ptr<FPointLightArrayInfo> PointLightArrayInfo = std::make_unique<FPointLightArrayInfo>();
         std::unique_ptr<FSpotLightArrayInfo> SpotLightArrayInfo = std::make_unique<FSpotLightArrayInfo>();
+        
+        if (PointLightTree.GetActive()) 
+        {
+            TArray<ULightComponentBase*> lightArray = PointLightTree.GetLightCutLights(StaticMeshComp);
+
+            for (int i = 0; i < lightArray.Num(); i++) 
+            {
+                if (lightArray[i]->IsA<UPointLightComponent>())
+                {
+                    if (UPointLightComponent* PointLight = Cast<UPointLightComponent>(lightArray[i]))
+                    {
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Color = PointLight->GetColor();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Position = PointLight->GetWorldLocation();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Intensity = PointLight->GetIntensity();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].AttenuationRadius = PointLight->GetRadius();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].LightFalloffExponent = PointLight->GetLightFalloffExponent();
+                        PointLightArrayInfo->PointLightCount++;
+                    }
+                }
+            }
+        }
+
+
         if (LightObjs.Num() > 0)
         {
-            for (int i = 0; i < LightObjs.Num(); i++) 
+            for (int i = 0; i < LightObjs.Num(); i++)
             {
                 if (LightObjs[i]->IsA<UAmbientLightComponent>())
                 {
@@ -780,7 +806,7 @@ void FRenderer::RenderStaticMeshes()
                     continue;
                 }
 
-                if (LightObjs[i]->IsA<UPointLightComponent>())
+                if (LightObjs[i]->IsA<UPointLightComponent>() && !PointLightTree.GetActive())  // PointLightTree가 켜져 있다면 그쪽에서 PointLight 처리를 해주므로
                 {
                     if (UPointLightComponent* PointLight = Cast<UPointLightComponent>(LightObjs[i]))
                     {
@@ -792,16 +818,16 @@ void FRenderer::RenderStaticMeshes()
                         PointLightArrayInfo->PointLightCount++;
                     }
                 }
-                
+
             }
         }
 
         std::unique_ptr<FFireballArrayInfo> fireballArrayInfo = std::make_unique<FFireballArrayInfo>();
-        
+
         if (FireballObjs.Num() > 0)
         {
             fireballArrayInfo->FireballCount = 0;
-        
+
             for (int i = 0; i < FireballObjs.Num(); i++)
             {
                 if (FireballObjs[i] != nullptr)
@@ -823,6 +849,7 @@ void FRenderer::RenderStaticMeshes()
                 }
             }
         }
+        
 
         FPointLightInfo PointLight;
         FSpotLightInfo SpotLight;
@@ -1057,6 +1084,38 @@ void FRenderer::HotReloadUberShader()
     }
 }
 
+void FRenderer::CheckGenerateLightTree()
+{
+    if (bGenerateLightTree) {
+        bGenerateLightTree = false;
+        GeneratePointLightCut();
+    }
+}
+
+void FRenderer::GeneratePointLightCut()
+{
+    TArray<ULightComponentBase*> PointLightObjs;
+
+    for (int i = 0; i < LightObjs.Num(); i++) {
+        if (LightObjs[i]->IsA<UPointLightComponent>() && !LightObjs[i]->IsA<USpotLightComponent>()) {
+            PointLightObjs.Add(LightObjs[i]);
+        }
+    }
+
+    PointLightTree.Build(PointLightObjs);
+    for (int i = 0; i < StaticMeshObjs.Num(); i++) {
+        PointLightTree.ComputeLightCut(StaticMeshObjs[i]);
+    }
+    PointLightTree.SetActive(true);
+}
+
+void FRenderer::DeletePointLightCut()
+{
+    PointLightTree.ClearLightCut();
+    PointLightTree.ClearLightTree();
+    PointLightTree.SetActive(false);
+}
+
 void FRenderer::SubscribeToFogUpdates(UHeightFogComponent* HeightFog)
 {
 
@@ -1087,9 +1146,15 @@ void FRenderer::ResetFogUpdates()
 
 void FRenderer::RenderLight()
 {
+    // 해당 Viewport가 LightWireframe을 볼 수 있는지 체크
+    if (!(ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_LightWireframe))) {
+        return;
+    }
     for (auto Light : LightObjs)
     {
-        
+        // Light들 중에 SelectActor의 Component인 경우만
+        // 최적화는 약간 안 좋을지도? ㅠ
+        if (Light->GetOwner() != World->GetSelectedActor()) continue;
         if (Light->IsA<UPointLightComponent>() && !Light->IsA<USpotLightComponent>())
         {
             // PointLight를 상속 받은 경우에 대해
@@ -1115,14 +1180,16 @@ void FRenderer::RenderLight()
             UDirectionalLightComponent* DirectionalLight = Cast<UDirectionalLightComponent>(Light);
             if (DirectionalLight) 
             {
-                // TODO: DirectionalLight의 Wireframe
+                if (GEngine->GetWorld()->WorldType == EWorldType::PIE) continue;
+                FMatrix Model = JungleMath::CreateModelMatrix(DirectionalLight->GetWorldLocation(), DirectionalLight->GetWorldRotation(), { 1, 1, 1 });
+                UPrimitiveBatch::GetInstance().AddLine(DirectionalLight->GetWorldLocation(), DirectionalLight->GetWorldLocation() + DirectionalLight->GetDirection() * 3.0f, DirectionalLight->GetColor());
             }
         }
     }
 }
 
 void FRenderer::RenderBatch(
-    const FGridParameters& gridParam, ID3D11Buffer* pVertexBuffer, int boundingBoxCount, int coneCount, int coneSegmentCount, int obbCount, int circleCount, int circleSegmentCount
+    const FGridParameters& gridParam, ID3D11Buffer* pVertexBuffer, int boundingBoxCount, int coneCount, int coneSegmentCount, int obbCount, int circleCount, int circleSegmentCount, int lineCount
 ) const
 {
     UINT stride = sizeof(FSimpleVertex);
@@ -1131,7 +1198,7 @@ void FRenderer::RenderBatch(
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
     UINT vertexCountPerInstance = 2;
-    UINT instanceCount = gridParam.numGridLines + 3 + (boundingBoxCount * 12) + (coneCount * (2 * coneSegmentCount + 10)) + (12 * obbCount) + (3 * circleCount * (circleSegmentCount));
+    UINT instanceCount = gridParam.numGridLines + 3 + (boundingBoxCount * 12) + (coneCount * (2 * coneSegmentCount + 10)) + (12 * obbCount) + (3 * circleCount * (circleSegmentCount)) + 10 * lineCount;
     Graphics->DeviceContext->DrawInstanced(vertexCountPerInstance, instanceCount, 0, 0);
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
@@ -1406,6 +1473,18 @@ ID3D11ShaderResourceView* FRenderer::CreateCircleSRV(ID3D11Buffer* pCircleBuffer
     return pCircleSRV;
 }
 
+ID3D11ShaderResourceView* FRenderer::CreateLineSRV(ID3D11Buffer* pLineBuffer, UINT numLines)
+{
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+    srvDesc.Buffer.ElementOffset = 0;
+    srvDesc.Buffer.NumElements = numLines;
+
+    Graphics->Device->CreateShaderResourceView(pLineBuffer, &srvDesc, &pLineSRV);
+    return pLineSRV;
+}
+
 void FRenderer::UpdateBoundingBoxBuffer(ID3D11Buffer* pBoundingBoxBuffer, const TArray<FBoundingBox>& BoundingBoxes, int numBoundingBoxes) const
 {
     if (!pBoundingBoxBuffer) return;
@@ -1458,6 +1537,19 @@ void FRenderer::UpdateCirclesBuffer(ID3D11Buffer* pCircleBuffer, const TArray<FC
     Graphics->DeviceContext->Unmap(pCircleBuffer, 0);
 }
 
+void FRenderer::UpdateLinesBuffer(ID3D11Buffer* pLineBuffer, const TArray<FLine>& Lines, int numLines) const
+{
+    if (!pLineBuffer) return;
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+    Graphics->DeviceContext->Map(pLineBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+    auto pData = reinterpret_cast<FLine*>(mappedResource.pData);
+    for (int i = 0; i < Lines.Num(); ++i)
+    {
+        pData[i] = Lines[i];
+    }
+    Graphics->DeviceContext->Unmap(pLineBuffer, 0);
+}
+
 void FRenderer::UpdateGridConstantBuffer(const FGridParameters& gridParams) const
 {
     D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -1473,7 +1565,7 @@ void FRenderer::UpdateGridConstantBuffer(const FGridParameters& gridParams) cons
     }
 }
 
-void FRenderer::UpdateLinePrimitveCountBuffer(int numBoundingBoxes, int numCones, int numOBBs) const
+void FRenderer::UpdateLinePrimitveCountBuffer(int numBoundingBoxes, int numCones, int numOBBs, int numCircles) const
 {
     D3D11_MAPPED_SUBRESOURCE mappedResource;
     HRESULT hr = Graphics->DeviceContext->Map(LinePrimitiveBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -1481,6 +1573,7 @@ void FRenderer::UpdateLinePrimitveCountBuffer(int numBoundingBoxes, int numCones
     pData->BoundingBoxCount = numBoundingBoxes;
     pData->ConeCount = numCones;
     pData->OBBCount = numOBBs;
+    pData->CircleCount = numCircles;
     Graphics->DeviceContext->Unmap(LinePrimitiveBuffer, 0);
 }
 

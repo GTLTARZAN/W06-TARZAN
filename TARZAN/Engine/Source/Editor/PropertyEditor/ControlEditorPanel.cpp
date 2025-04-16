@@ -18,6 +18,7 @@
 #include "Components/FireballComp.h"
 #include "UEditorStateManager.h"
 #include "UObject/UObjectIterator.h"
+#include "Engine/Source/Runtime/Renderer/Renderer.h"
 
 
 void ControlEditorPanel::Render()
@@ -56,6 +57,10 @@ void ControlEditorPanel::Render()
     ImGui::SameLine();
 
     CreateFlagButton();
+
+    ImGui::SameLine();
+
+    CreateLightCutButton();
 
     ImGui::SameLine();
 
@@ -545,7 +550,7 @@ void ControlEditorPanel::CreateFlagButton() const
         ImGui::OpenPopup("ShowControl");
     }
 
-    const char* items[] = { "AABB", "Primitive", "BillBoard", "UUID", "Fog" };
+    const char* items[] = { "AABB", "Primitive", "BillBoard", "UUID", "Fog", "LightWireFrame"};
     uint64 ActiveViewportFlags = ActiveViewport->GetShowFlag();
 
     if (ImGui::BeginPopup("ShowControl"))
@@ -556,7 +561,8 @@ void ControlEditorPanel::CreateFlagButton() const
             (ActiveViewportFlags & static_cast<uint64>(EEngineShowFlags::SF_Primitives)) != 0,
             (ActiveViewportFlags & static_cast<uint64>(EEngineShowFlags::SF_BillboardText)) != 0,
             (ActiveViewportFlags & static_cast<uint64>(EEngineShowFlags::SF_UUIDText)) != 0,
-            (ActiveViewportFlags & static_cast<uint64>(EEngineShowFlags::SF_Fog)) != 0
+            (ActiveViewportFlags & static_cast<uint64>(EEngineShowFlags::SF_Fog)) != 0,
+            (ActiveViewportFlags & static_cast<uint64>(EEngineShowFlags::SF_LightWireframe)) != 0
         };
 
         for (int i = 0; i < IM_ARRAYSIZE(items); i++)
@@ -578,6 +584,29 @@ void ControlEditorPanel::CreateFlagButton() const
     }
 }
 
+void ControlEditorPanel::CreateLightCutButton() const
+{
+    if (ImGui::Button("LightCut", ImVec2(90, 32)))
+    {
+        ImGui::OpenPopup("LightCutPopup");
+    }
+
+    // 팝업에 표시할 항목들
+    const char* items[] = { "Generate LightCut", "Remove LightCut" };
+
+    if (ImGui::BeginPopup("LightCutPopup"))
+    {
+        if (ImGui::Selectable(items[0]))
+        {
+            GEngine->renderer.SetGenerateLightTree(true);
+        }
+        if (ImGui::Selectable(items[1]))
+        {
+            GEngine->renderer.DeletePointLightCut();
+        }
+        ImGui::EndPopup();
+    }
+}
 void ControlEditorPanel::CreatePIEButton(ImVec2 ButtonSize) const
 {
     float TotalWidth = ButtonSize.x * 3.0f + 16.0f;
@@ -681,6 +710,8 @@ uint64 ControlEditorPanel::ConvertSelectionToFlags(const bool selected[]) const
         flags |= static_cast<uint64>(EEngineShowFlags::SF_UUIDText);
     if (selected[4])
         flags |= static_cast<uint64>(EEngineShowFlags::SF_Fog);
+    if (selected[5])
+        flags |= static_cast<uint64>(EEngineShowFlags::SF_LightWireframe);
     return flags;
 }
 

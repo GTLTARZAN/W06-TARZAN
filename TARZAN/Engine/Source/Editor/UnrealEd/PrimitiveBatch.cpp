@@ -50,16 +50,19 @@ void UPrimitiveBatch::RenderBatch(ID3D11Buffer* ConstantBuffer, const FMatrix& V
     UpdateConeResources();
     UpdateOBBResources();
     UpdateCircleResources();
+    UpdateLineResources();
     int boundingBoxSize = static_cast<int>(BoundingBoxes.Num());
     int coneSize = static_cast<int>(Cones.Num());
     int obbSize = static_cast<int>(OrientedBoundingBoxes.Num());
     int circleSize = static_cast<int>(Circles.Num());
-    UEditorEngine::renderer.UpdateLinePrimitveCountBuffer(boundingBoxSize, coneSize, obbSize);
-    UEditorEngine::renderer.RenderBatch(GridParam, pVertexBuffer, boundingBoxSize, coneSize, ConeSegmentCount, obbSize, circleSize, CircleSegmentCount);
+    int lineSize = static_cast<int>(Lines.Num());
+    UEditorEngine::renderer.UpdateLinePrimitveCountBuffer(boundingBoxSize, coneSize, obbSize, circleSize);
+    UEditorEngine::renderer.RenderBatch(GridParam, pVertexBuffer, boundingBoxSize, coneSize, ConeSegmentCount, obbSize, circleSize, CircleSegmentCount, lineSize);
     BoundingBoxes.Empty();
     Cones.Empty();
     Circles.Empty();
     OrientedBoundingBoxes.Empty();
+    Lines.Empty();
 #if USE_GBUFFER
     UEditorEngine::renderer.PrepareShader();
 #else
@@ -164,6 +167,24 @@ void UPrimitiveBatch::ReleaseCircleResources()
     if (pCircleBuffer) pCircleBuffer->Release();
     if (pCircleSRV) pCircleSRV->Release();
 }
+void UPrimitiveBatch::UpdateLineResources()
+{
+    if (Lines.Num() > allocatedLineCapacity) {
+        allocatedLineCapacity = Lines.Num();
+        ReleaseLineResources();
+        pLineBuffer = UEditorEngine::renderer.GetResourceManager().CreateStructuredBuffer<FLine>(static_cast<UINT>(allocatedLineCapacity));
+        pLineSRV = UEditorEngine::renderer.CreateLineSRV(pLineBuffer, static_cast<UINT>(allocatedLineCapacity));
+    }
+    if (pLineBuffer && pLineSRV) {
+        int lineCount = static_cast<int>(Lines.Num());
+        UEditorEngine::renderer.UpdateLinesBuffer(pLineBuffer, Lines, lineCount);
+    }
+}
+void UPrimitiveBatch::ReleaseLineResources()
+{
+    if (pLineBuffer) pLineBuffer->Release();
+    if (pLineSRV) pLineSRV->Release();
+}
 void UPrimitiveBatch::RenderAABB(const FBoundingBox& localAABB, const FVector& center, const FMatrix& modelMatrix)
 {
     FVector localVertices[8] = {
@@ -255,5 +276,14 @@ void UPrimitiveBatch::AddCircle(const FVector& center, float radius, int segment
     circle.Color = color;
     circle.CircleSegmentCount = CircleSegmentCount;
     Circles.Add(circle);
+}
+
+void UPrimitiveBatch::AddLine(const FVector& start, const FVector& end, const FLinearColor& color)
+{
+    FLine line;
+    line.LineStart = start;
+    line.LineEnd = end;
+    line.LineColor = color;
+    Lines.Add(line);
 }
 
