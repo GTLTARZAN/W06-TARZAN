@@ -1,7 +1,7 @@
 // Uber.hlsl
 
-#define NUM_POINT_LIGHT 4
-#define NUM_SPOT_LIGHT 4
+#define NUM_POINT_LIGHT 16
+#define NUM_SPOT_LIGHT 16
 
 //#define UNLIT 1
 //#define LIGHTING_MODEL_GOURAUD 1

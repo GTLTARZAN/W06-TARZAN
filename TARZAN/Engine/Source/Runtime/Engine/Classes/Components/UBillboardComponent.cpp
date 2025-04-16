@@ -4,6 +4,7 @@
 #include "Define.h"
 #include <DirectXMath.h>
 
+#include "Components/Light/LightComponent.h"
 #include "Engine/World.h"
 #include "Math/MathUtility.h"
 #include "UnrealEd/EditorViewportClient.h"
@@ -123,11 +124,11 @@ void UBillboardComponent::GetProperties(TMap<FString, FString>& OutProperties) c
 {
     Super::GetProperties(OutProperties);
 
-    
     OutProperties.Add(TEXT("FinalIndexU"), FString::Printf(TEXT("%f"), finalIndexU));
     OutProperties.Add(TEXT("FinalIndexV"), FString::Printf(TEXT("%f"), finalIndexV));
     OutProperties.Add(TEXT("TexturePath"), FString(TexturePath.c_str()));
-    
+    OutProperties.Add(TEXT("TintColor"), TintColor.ToString());
+    OutProperties.Add(TEXT("bIsLightIcon"), bIsLightIcon ? TEXT("true") : TEXT("false"));
 }
 
 void UBillboardComponent::SetProperties(const TMap<FString, FString>& InProperties)
@@ -149,6 +150,37 @@ void UBillboardComponent::SetProperties(const TMap<FString, FString>& InProperti
     {
         TexturePath = TempStr->ToWideString();
         Texture = UEditorEngine::resourceMgr.GetTexture(TexturePath);
+    }
+    TempStr = InProperties.Find(TEXT("TintColor"));
+    if (TempStr)
+    {
+        TintColor.InitFromString(*TempStr);
+    }
+    TempStr = InProperties.Find(TEXT("bIsLightIcon"));
+    if (TempStr)
+    {
+        bIsLightIcon = TempStr->ToBool();
+        if (bIsLightIcon)
+        {
+            if (GetAttachParent()->IsA<ULightComponentBase>())
+            {
+                ULightComponentBase* LightComp = dynamic_cast<ULightComponentBase*>(GetAttachParent());
+                LightComp->SetTexture2D(this);
+            }
+
+            //if (AActor* OwnerActor = GetOwner())
+            //{
+            //    // LightComponent를 찾아서 자동으로 연결해준다
+            //    for (UActorComponent* Comp : OwnerActor->GetComponents())
+            //    {
+            //        if (ULightComponentBase* LightComp = dynamic_cast<ULightComponentBase*>(Comp))
+            //        {
+            //            LightComp->SetTexture2D(this);
+            //            break; // 한 개만 연결되면 충분
+            //        }
+            //    }
+            //}
+        }
     }
 }
 

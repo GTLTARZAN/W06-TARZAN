@@ -31,6 +31,9 @@ public:
     FBoundingBox GetBoundingBox() { return AABB; }
 
 protected:
+    virtual const wchar_t* GetDefaultIconPath() const override { return L"Engine/Icon/SpotLight_64x.png"; }
+
+protected:
     float InnerConeAngle;
     float OuterConeAngle;
 

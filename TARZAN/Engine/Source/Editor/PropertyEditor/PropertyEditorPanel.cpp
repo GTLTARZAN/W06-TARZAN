@@ -397,78 +397,6 @@ void PropertyEditorPanel::Render()
         }
     }
 
-    if (PickedActor && PickedComponent && PickedComponent->IsA<UPointLightComponent>())
-    {
-        UPointLightComponent* PointLight = Cast<UPointLightComponent>(PickedComponent);
-        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
-
-        if (ImGui::TreeNodeEx("Point Light", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen))
-        {
-            // --------------------- 색상 ---------------------
-            FLinearColor color = PointLight->GetColor();
-            float r = color.R, g = color.G, b = color.B, a = color.A;
-            float h, s, v;
-            RGBToHSV(r, g, b, h, s, v);
-            float colorArr[4] = { r, g, b, a };
-
-            if (ImGui::ColorEdit4("Color##Point", colorArr))
-            {
-                PointLight->SetColor(FLinearColor(colorArr[0], colorArr[1], colorArr[2], colorArr[3]));
-            }
-
-            bool changedRGB = false, changedHSV = false;
-            ImGui::PushItemWidth(50.0f);
-            if (ImGui::DragFloat("R##Point", &r, 0.001f, 0.f, 1.f)) changedRGB = true;
-            ImGui::SameLine();
-            if (ImGui::DragFloat("G##Point", &g, 0.001f, 0.f, 1.f)) changedRGB = true;
-            ImGui::SameLine();
-            if (ImGui::DragFloat("B##Point", &b, 0.001f, 0.f, 1.f)) changedRGB = true;
-            ImGui::Spacing();
-            if (ImGui::DragFloat("H##Point", &h, 0.1f, 0.f, 360)) changedHSV = true;
-            ImGui::SameLine();
-            if (ImGui::DragFloat("S##Point", &s, 0.001f, 0.f, 1)) changedHSV = true;
-            ImGui::SameLine();
-            if (ImGui::DragFloat("V##Point", &v, 0.001f, 0.f, 1)) changedHSV = true;
-            ImGui::PopItemWidth();
-
-            if (changedRGB && !changedHSV)
-            {
-                RGBToHSV(r, g, b, h, s, v);
-                PointLight->SetColor(FLinearColor(r, g, b, a));
-            }
-            else if (changedHSV && !changedRGB)
-            {
-                HSVToRGB(h, s, v, r, g, b);
-                PointLight->SetColor(FLinearColor(r, g, b, a));
-            }
-
-            // --------------------- Intensity ---------------------
-            float intensity = PointLight->GetIntensity();
-            if (ImGui::DragFloat("Intensity", &intensity, 0.1f, 0.0f, 100.0f))
-            {
-                PointLight->SetIntensity(intensity);
-            }
-
-            // --------------------- Radius ---------------------
-            float radius = PointLight->GetRadius();
-            if (ImGui::DragFloat("Radius", &radius, 1.0f, 0.0f, 1000.0f))
-            {
-                PointLight->SetRadius(radius);
-            }
-
-            // --------------------- Falloff ---------------------
-            float falloff = PointLight->GetLightFalloffExponent();
-            if (ImGui::DragFloat("Falloff Exponent", &falloff, 0.1f, 0.0f, 10.0f))
-            {
-                PointLight->SetLightFalloffExponent(falloff);
-            }
-
-            ImGui::TreePop();
-        }
-
-        ImGui::PopStyleColor();
-    }
-
     if (PickedActor && PickedComponent && PickedComponent->IsA<USpotLightComponent>())
     {
         USpotLightComponent* SpotLightComponent = Cast<USpotLightComponent>(PickedComponent);
@@ -592,6 +520,77 @@ void PropertyEditorPanel::Render()
             }
             ImGui::TreePop();
         }
+        ImGui::PopStyleColor();
+    }
+    else if (PickedActor && PickedComponent && PickedComponent->IsA<UPointLightComponent>())
+    {
+        UPointLightComponent* PointLight = Cast<UPointLightComponent>(PickedComponent);
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+
+        if (ImGui::TreeNodeEx("Point Light", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            // --------------------- 색상 ---------------------
+            FLinearColor color = PointLight->GetColor();
+            float r = color.R, g = color.G, b = color.B, a = color.A;
+            float h, s, v;
+            RGBToHSV(r, g, b, h, s, v);
+            float colorArr[4] = { r, g, b, a };
+
+            if (ImGui::ColorEdit4("Color##Point", colorArr))
+            {
+                PointLight->SetColor(FLinearColor(colorArr[0], colorArr[1], colorArr[2], colorArr[3]));
+            }
+
+            bool changedRGB = false, changedHSV = false;
+            ImGui::PushItemWidth(50.0f);
+            if (ImGui::DragFloat("R##Point", &r, 0.001f, 0.f, 1.f)) changedRGB = true;
+            ImGui::SameLine();
+            if (ImGui::DragFloat("G##Point", &g, 0.001f, 0.f, 1.f)) changedRGB = true;
+            ImGui::SameLine();
+            if (ImGui::DragFloat("B##Point", &b, 0.001f, 0.f, 1.f)) changedRGB = true;
+            ImGui::Spacing();
+            if (ImGui::DragFloat("H##Point", &h, 0.1f, 0.f, 360)) changedHSV = true;
+            ImGui::SameLine();
+            if (ImGui::DragFloat("S##Point", &s, 0.001f, 0.f, 1)) changedHSV = true;
+            ImGui::SameLine();
+            if (ImGui::DragFloat("V##Point", &v, 0.001f, 0.f, 1)) changedHSV = true;
+            ImGui::PopItemWidth();
+
+            if (changedRGB && !changedHSV)
+            {
+                RGBToHSV(r, g, b, h, s, v);
+                PointLight->SetColor(FLinearColor(r, g, b, a));
+            }
+            else if (changedHSV && !changedRGB)
+            {
+                HSVToRGB(h, s, v, r, g, b);
+                PointLight->SetColor(FLinearColor(r, g, b, a));
+            }
+
+            // --------------------- Intensity ---------------------
+            float intensity = PointLight->GetIntensity();
+            if (ImGui::DragFloat("Intensity", &intensity, 0.1f, 0.0f, 100.0f))
+            {
+                PointLight->SetIntensity(intensity);
+            }
+
+            // --------------------- Radius ---------------------
+            float radius = PointLight->GetRadius();
+            if (ImGui::DragFloat("Radius", &radius, 1.0f, 0.0f, 1000.0f))
+            {
+                PointLight->SetRadius(radius);
+            }
+
+            // --------------------- Falloff ---------------------
+            float falloff = PointLight->GetLightFalloffExponent();
+            if (ImGui::DragFloat("Falloff Exponent", &falloff, 0.1f, 0.0f, 10.0f))
+            {
+                PointLight->SetLightFalloffExponent(falloff);
+            }
+
+            ImGui::TreePop();
+        }
+
         ImGui::PopStyleColor();
     }
 

@@ -165,7 +165,6 @@ void USceneComponent::PostDuplicate() {}
 
 void USceneComponent::GetProperties(TMap<FString, FString>& OutProperties) const
 {
-    
     Super::GetProperties(OutProperties);
     // --- 이제 자신의 속성을 동일한 OutProperties 맵에 추가 ---
     // 1. AttachParentID 저장

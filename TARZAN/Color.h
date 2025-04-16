@@ -79,4 +79,76 @@ struct FLinearColor
             };
         return FLinearColor(Linearize(R), Linearize(G), Linearize(B), A);
     }
+
+    FString ToString() const
+    {
+        return FString::Printf(TEXT("R=%f G=%f B=%f A=%f"), R, G, B, A);
+    }
+
+    bool InitFromString(const FString& SourceString)
+    {
+        // FString에서 C-스타일 문자열 포인터 얻기 (메서드 이름은 실제 FString 구현에 맞게 조정)
+        const char* currentPos = *SourceString; // 또는 SourceString.c_str();
+        if (currentPos == nullptr) return false; // 빈 문자열 또는 오류
+
+        float parsedR, parsedG, parsedB, parsedA;
+        char* endPtrR = nullptr;
+        char* endPtrG = nullptr;
+        char* endPtrB = nullptr;
+        char* endPtrA = nullptr;
+
+        // 1. "X=" 찾기 및 값 파싱
+        const char* xMarker = strstr(currentPos, "R=");
+        if (xMarker == nullptr) return false; // "X=" 마커 없음
+
+        // "X=" 다음 위치로 이동
+        const char* xValueStart = xMarker + 2; // "X=" 길이만큼 이동
+
+        // 숫자 변환 시도 (strtof는 선행 공백 무시)
+        parsedR = strtof(xValueStart, &endPtrR);
+        // 변환 실패 확인 (숫자를 전혀 읽지 못함)
+        if (endPtrR == xValueStart) return false;
+
+        // 파싱 성공, 다음 검색 시작 위치 업데이트
+        currentPos = endPtrR;
+
+        // 2. "Y=" 찾기 및 값 파싱 (X 이후부터 검색)
+        const char* yMarker = strstr(currentPos, "G=");
+        if (yMarker == nullptr) return false; // "Y=" 마커 없음
+
+        const char* yValueStart = yMarker + 2;
+        parsedG = strtof(yValueStart, &endPtrG);
+        if (endPtrG == yValueStart) return false; // 변환 실패
+
+        // 다음 검색 시작 위치 업데이트
+        currentPos = endPtrG;
+
+        // 3. "Z=" 찾기 및 값 파싱 (Y 이후부터 검색)
+        const char* zMarker = strstr(currentPos, "B=");
+        if (zMarker == nullptr) return false; // "Z=" 마커 없음
+
+        const char* zValueStart = zMarker + 2;
+        parsedB = strtof(zValueStart, &endPtrB);
+        if (endPtrB == zValueStart) return false; // 변환 실패
+
+
+        // 다음 검색 시작 위치 업데이트
+        currentPos = endPtrB;
+
+        // 4. "A=" 찾기 및 값 파싱 (Z 이후부터 검색)
+        const char* aMarker = strstr(currentPos, "A=");
+        if (aMarker == nullptr) return false; // "Z=" 마커 없음
+
+        const char* aValueStart = aMarker + 2;
+        parsedA = strtof(aValueStart, &endPtrA);
+        if (endPtrA == aValueStart) return false; // 변환 실패
+
+
+        // 모든 파싱 성공 시, 멤버 변수 업데이트
+        R = parsedR;
+        G = parsedG;
+        B = parsedB;
+        A = parsedA;
+        return true;
+    }
 };

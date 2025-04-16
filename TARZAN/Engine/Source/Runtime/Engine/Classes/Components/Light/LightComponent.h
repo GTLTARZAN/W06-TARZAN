@@ -34,6 +34,11 @@ public:
     UBillboardComponent* GetTexture2D() const { return Texture2D; }
 
     virtual void InitializeComponent() {};
+    virtual void GetProperties(TMap<FString, FString>& OutProperties) const override;
+    virtual void SetProperties(const TMap<FString, FString>& InProperties) override;
+
+protected:
+    virtual const wchar_t* GetDefaultIconPath() const { return L"Engine/Icon/DefaultLight_64x.png"; }
 
 protected:
     float Intensity;
@@ -64,6 +69,9 @@ public:
     virtual ~UAmbientLightComponent() override;
 
     virtual void InitializeComponent() override;
+
+protected:
+    virtual const wchar_t* GetDefaultIconPath() const override { return L"Engine/Icon/AmbientLight_64x.png"; }
 };
 
 
@@ -77,6 +85,9 @@ public:
 
     virtual void InitializeComponent() override;
     FVector GetDirection() { return GetForwardVector(); }
+
+protected:
+    virtual const wchar_t* GetDefaultIconPath() const override { return L"Engine/Icon/DirectionalLight_64x.png"; }
 
 protected:
     FVector Direction;
@@ -93,12 +104,18 @@ public:
     UPointLightComponent(const UPointLightComponent& Other);
     virtual ~UPointLightComponent() override;
 
-    virtual void InitializeComponent() override;
-
     void SetRadius(float InRadius);
     float GetRadius() const;
     void SetLightFalloffExponent(float Exponent);
     float GetLightFalloffExponent() const;
+
+    virtual void InitializeComponent() override;
+
+    virtual void GetProperties(TMap<FString, FString>& OutProperties) const override;
+    virtual void SetProperties(const TMap<FString, FString>& InProperties) override;
+
+protected:
+    virtual const wchar_t* GetDefaultIconPath() const override { return L"Engine/Icon/PointLight_64x.png"; } 
 
 protected:
     float Radius;
