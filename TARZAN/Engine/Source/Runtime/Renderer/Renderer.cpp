@@ -1148,7 +1148,8 @@ void FRenderer::RenderLight()
 {
     for (auto Light : LightObjs)
     {
-        
+        // 일단 여기에 Light들 중에 SelectActor의 Component인 경우만
+        if (Light->GetOwner() != World->GetSelectedActor()) continue;
         if (Light->IsA<UPointLightComponent>() && !Light->IsA<USpotLightComponent>())
         {
             // PointLight를 상속 받은 경우에 대해
