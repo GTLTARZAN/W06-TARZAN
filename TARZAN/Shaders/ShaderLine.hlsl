@@ -503,6 +503,7 @@ PS_INPUT mainVS(VS_INPUT input)
     return output;
 }
 
+[earlydepthstencil]
 float4 mainPS(PS_INPUT input) : SV_Target
 {
     float3 worldPos = input.WorldPos.xyz;
