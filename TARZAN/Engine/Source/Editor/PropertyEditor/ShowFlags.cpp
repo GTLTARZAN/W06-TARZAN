@@ -3,7 +3,7 @@
 
 ShowFlags::ShowFlags()
 {
-    currentFlags = 31;
+    currentFlags = 63;
 }
 
 ShowFlags::~ShowFlags()
@@ -65,6 +65,8 @@ uint64 ShowFlags::ConvertSelectionToFlags(const bool selected[])
 		flags |= static_cast<uint64>(EEngineShowFlags::SF_UUIDText);
     if (selected[4])
         flags |= static_cast<uint64>(EEngineShowFlags::SF_Fog);
+    if(selected[5])
+        flags |= static_cast<uint64>(EEngineShowFlags::SF_LightWireframe);
 	return flags;
 }
 

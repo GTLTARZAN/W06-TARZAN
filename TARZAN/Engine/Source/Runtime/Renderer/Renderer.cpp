@@ -1146,9 +1146,14 @@ void FRenderer::ResetFogUpdates()
 
 void FRenderer::RenderLight()
 {
+    // 해당 Viewport가 LightWireframe을 볼 수 있는지 체크
+    if (!(ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_LightWireframe))) {
+        return;
+    }
     for (auto Light : LightObjs)
     {
-        // 일단 여기에 Light들 중에 SelectActor의 Component인 경우만
+        // Light들 중에 SelectActor의 Component인 경우만
+        // 최적화는 약간 안 좋을지도? ㅠ
         if (Light->GetOwner() != World->GetSelectedActor()) continue;
         if (Light->IsA<UPointLightComponent>() && !Light->IsA<USpotLightComponent>())
         {
