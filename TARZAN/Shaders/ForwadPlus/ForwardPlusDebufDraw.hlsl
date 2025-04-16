@@ -5,7 +5,7 @@
 //--------------------------------------------------------------------------------------
 
 
-#include "ForwardPlus11Common.hlsl"
+#include "ForwardPlusCommon.hlsl"
 
 // disable warning: pow(f, e) will not work for negative f
 #pragma warning( disable : 3571 )
