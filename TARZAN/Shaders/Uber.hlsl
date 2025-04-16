@@ -172,9 +172,9 @@ struct VS_OUT
     float3 WorldPos : TEXCOORD0;
     float3 Normal : TEXCOORD1;
     float2 TexCoord : TEXCOORD2;
-    float3 TBN0 : TEXCOORD3;
-    float3 TBN1 : TEXCOORD4;
-    float3 TBN2 : TEXCOORD5;
+    float3 T : TEXCOORD3;
+    float3 B : TEXCOORD4;
+    float3 N : TEXCOORD5;
 };
 
 struct PS_OUT
@@ -198,9 +198,13 @@ VS_OUT Uber_VS(VS_IN Input)
     
     output.Normal = N;
     
-    output.TBN0 = float3(T.x, B.x, N.x);
-    output.TBN1 = float3(T.y, B.y, N.y);
-    output.TBN2 = float3(T.z, B.z, N.z);
+    //output.TBN0 = float3(T.x, B.x, N.x);
+    //output.TBN1 = float3(T.y, B.y, N.y);
+    //output.TBN2 = float3(T.z, B.z, N.z);
+    
+    output.T = float3(T.x, T.y, T.z);
+    output.B = float3(B.x, B.y, B.z);
+    output.N = float3(N.x, N.y, N.z);
     
 #if LIGHTING_MODEL_GOURAUD
     float3 viewDir = normalize(-worldPos.xyz);
@@ -239,7 +243,10 @@ PS_OUT Uber_PS(VS_OUT Input)
     
     if (isValidTexture)
     {
-        albedoColor = textureColor * float4(Material.DiffuseColor, 1);
+        if (all(Material.DiffuseColor < 1e-5f))
+            albedoColor = textureColor;
+        else
+            albedoColor = textureColor * float4(Material.DiffuseColor, 1);
     }
     else
     {
@@ -250,10 +257,11 @@ PS_OUT Uber_PS(VS_OUT Input)
     bool HasNormalMap = dot(NormalMap.xyz, float3(1, 1, 1)) > 1e-5f;
     
     float3 normalWS;
+    float3 normalTS;
     if (HasNormalMap)
     {
-        float3x3 TBN = float3x3(Input.TBN0, Input.TBN1, Input.TBN2);
-        float3 normalTS = NormalMap.xyz * 2.0f - 1.0f;
+        float3x3 TBN = float3x3(Input.T, Input.B, Input.N);
+        normalTS = NormalMap.xyz * 2.0f - 1.0f;
         normalWS = normalize(mul(normalTS, TBN));
     }
     else
