@@ -89,6 +89,26 @@ public:
 
     ID3D11BlendState* LineBlendState = nullptr;
 
+    // Forward+ Resources
+    ID3D11Buffer* PointLightBuffer_CenterAndRadius = nullptr;
+    ID3D11Buffer* PointLightBuffer_Color = nullptr;
+
+    ID3D11Buffer* SpotLightBuffer_CenterAndRadius = nullptr;
+    ID3D11Buffer* SpotLightBuffer_Color = nullptr;
+    ID3D11Buffer* SpotLightBuffer_SpotParams = nullptr;
+
+    ID3D11Buffer* LightIndexBuffer = nullptr;
+
+    ID3D11ShaderResourceView* PointLightBufferSRV_CenterAndRadius = nullptr;
+    ID3D11ShaderResourceView* PointLightBufferSRV_Color = nullptr;
+    
+    ID3D11ShaderResourceView* SpotLightBufferSRV_CenterAndRadius = nullptr;
+    ID3D11ShaderResourceView* SpotLightBufferSRV_Color = nullptr;
+    ID3D11ShaderResourceView* SpotLightBufferSRV_SpotParams = nullptr;
+
+    ID3D11ShaderResourceView* LightIndexBufferSRV = nullptr;
+    ID3D11UnorderedAccessView* LightIndexBufferUAV = nullptr;
+
     void Initialize(HWND hWindow);
 
     void CreateDeviceAndSwapChain(HWND hWindow);
@@ -100,6 +120,7 @@ public:
     void CreateFrameBuffer();
     void CreateLightPassBuffer();
     void CreateBlendState();
+    void CreateForwardPlusResources();
     
     void ReleaseDeviceAndSwapChain();
     void ReleaseUber();
@@ -111,6 +132,7 @@ public:
     void ReleaseRasterizerState();
     void ReleaseDepthStencilResources();
     void ReleaseBlendState();
+    void ReleaseForwardPlusResources();
     void Release();
     
     void SwapBuffer() const;

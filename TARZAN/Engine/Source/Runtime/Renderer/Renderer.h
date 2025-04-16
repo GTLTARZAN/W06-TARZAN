@@ -101,6 +101,10 @@ public:
     // Overlay Shader
     ID3D11PixelShader* GizmoPixelShader = nullptr;
 
+    // Forward+ Shaders
+    ID3D11ComputeShader* ForwardPlusTilingCS = nullptr;
+    ID3D11PixelShader* ForwardPlusPS = nullptr; // 기존 Uber 셰이더를 활용할 수도 있음
+
     ID3D11VertexShader* VertexShader = nullptr;
     ID3D11PixelShader* PixelShader = nullptr;
     ID3D11InputLayout* InputLayout = nullptr;
@@ -122,6 +126,7 @@ public:
     ID3D11Buffer* LPMaterialConstantBuffer = nullptr;
     ID3D11Buffer* FogConstantBuffer = nullptr;
     ID3D11Buffer* ScreenConstantBuffer = nullptr;
+    ID3D11Buffer* ForwardPlusFrameConstantBuffer = nullptr; // Forward+ 프레임 상수 버퍼
 
     // Data
     FLighting LightingData;

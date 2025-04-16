@@ -23,6 +23,24 @@ public:
     void UpdateFireballConstant(ID3D11Buffer* FireballConstantBuffer, const FFireballArrayInfo FireballInfo) const;
     void UpdateFogConstant(ID3D11Buffer* FogConstantBuffer, const FFogConstants& FogConstants) const;
     void UpdateScreenConstant(ID3D11Buffer* ScreenConstantBuffer, std::shared_ptr<FEditorViewportClient>viewport) const;
+    void UpdateForwardPlusFrameConstants(ID3D11Buffer* ConstantBuffer, const FForwardPlusFrameConstants& constant) const;
+
+    // Forward+ Light Buffer Update Functions
+    void UpdatePointLightBuffers(
+        ID3D11Buffer* CenterRadiusBuffer,
+        ID3D11Buffer* ColorBuffer,
+        const TArray<FVector4>& CenterRadiusData,
+        const TArray<FVector4>& ColorData,
+        uint32 LightCount) const;
+
+    void UpdateSpotLightBuffers(
+        ID3D11Buffer* CenterRadiusBuffer,
+        ID3D11Buffer* ColorBuffer,
+        ID3D11Buffer* ParamsBuffer,
+        const TArray<FVector4>& CenterRadiusData,
+        const TArray<FVector4>& ColorData,
+        const TArray<FVector4>& ParamsData,
+        uint32 LightCount) const;
 
     void UpdateObjectMatrixConstants(ID3D11Buffer* ObjectMatrixConstantBuffer, const FObjectMatrixConstants& ObjectMatrix) const;
     void UpdateCameraPositionConstants(ID3D11Buffer* CameraConstantBuffer, const FCameraConstant& CameraPosition) const;

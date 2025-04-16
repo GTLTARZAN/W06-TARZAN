@@ -16,6 +16,7 @@ void FGraphicsDevice::Initialize(HWND hWindow) {
     CreateDepthStencilState();
     CreateRasterizerState();
     CreateBlendState();
+    CreateForwardPlusResources();
     CurrentRasterizer = RasterizerStateSOLID;
 }
 
@@ -331,17 +332,85 @@ void FGraphicsDevice::CreateLightPassBuffer()
 
 void FGraphicsDevice::CreateBlendState()
 {
-    D3D11_BLEND_DESC blendDesc = {};
-    blendDesc.RenderTarget[0].BlendEnable = TRUE;
-    blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-    blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-    blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-    blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-    blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    D3D11_BLEND_DESC desc;
+    ZeroMemory(&desc, sizeof(desc));
+    desc.RenderTarget[0].BlendEnable = TRUE;
+    desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+    desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+    desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+    desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    
+    Device->CreateBlendState(&desc, &LineBlendState);
+}
 
-    Device->CreateBlendState(&blendDesc, &LineBlendState);
+void FGraphicsDevice::CreateForwardPlusResources()
+{
+    HRESULT hr;
+    // 임시 최대 광원 수 (실제 씬 데이터에 맞게 조절 필요)
+    const UINT MAX_LIGHTS = 1024;
+    // 최대 타일 수 (화면 크기와 타일 크기에 따라 계산 필요)
+    const UINT MAX_TILES = ( (screenWidth + 15) / 16 ) * ( (screenHeight + 15) / 16 );
+    // 타일당 최대 광원 수 (ForwardPlusCommon.hlsl과 일치해야 함)
+    const UINT MAX_LIGHTS_PER_TILE = 544;
+
+    // 1. Point Light Buffers (SRV)
+    D3D11_BUFFER_DESC lightBufferDesc = {};
+    lightBufferDesc.Usage = D3D11_USAGE_DYNAMIC; // CPU에서 업데이트 가능하도록
+    lightBufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    lightBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    lightBufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED; // 구조화된 버퍼
+    lightBufferDesc.ByteWidth = sizeof(FVector4) * MAX_LIGHTS;
+    lightBufferDesc.StructureByteStride = sizeof(FVector4);
+
+    hr = Device->CreateBuffer(&lightBufferDesc, nullptr, &PointLightBuffer_CenterAndRadius);
+    hr = Device->CreateBuffer(&lightBufferDesc, nullptr, &PointLightBuffer_Color);
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+    srvDesc.Buffer.FirstElement = 0;
+    srvDesc.Buffer.NumElements = MAX_LIGHTS;
+
+    hr = Device->CreateShaderResourceView(PointLightBuffer_CenterAndRadius, &srvDesc, &PointLightBufferSRV_CenterAndRadius);
+    hr = Device->CreateShaderResourceView(PointLightBuffer_Color, &srvDesc, &PointLightBufferSRV_Color);
+
+    // 2. Spot Light Buffers (SRV)
+    // CenterAndRadius, Color 버퍼는 Point Light와 동일한 Desc 사용
+    hr = Device->CreateBuffer(&lightBufferDesc, nullptr, &SpotLightBuffer_CenterAndRadius);
+    hr = Device->CreateBuffer(&lightBufferDesc, nullptr, &SpotLightBuffer_Color);
+    // SpotParams 버퍼 (Direction(xy), Angle(z), Unused(w))
+    hr = Device->CreateBuffer(&lightBufferDesc, nullptr, &SpotLightBuffer_SpotParams);
+
+    hr = Device->CreateShaderResourceView(SpotLightBuffer_CenterAndRadius, &srvDesc, &SpotLightBufferSRV_CenterAndRadius);
+    hr = Device->CreateShaderResourceView(SpotLightBuffer_Color, &srvDesc, &SpotLightBufferSRV_Color);
+    hr = Device->CreateShaderResourceView(SpotLightBuffer_SpotParams, &srvDesc, &SpotLightBufferSRV_SpotParams);
+
+    // 3. Light Index Buffer (UAV + SRV)
+    D3D11_BUFFER_DESC lightIndexBufferDesc = {};
+    lightIndexBufferDesc.Usage = D3D11_USAGE_DEFAULT; // GPU에서 읽고 쓰기
+    lightIndexBufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+    lightIndexBufferDesc.CPUAccessFlags = 0;
+    lightIndexBufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+    lightIndexBufferDesc.ByteWidth = sizeof(uint32) * MAX_LIGHTS_PER_TILE * MAX_TILES;
+    lightIndexBufferDesc.StructureByteStride = sizeof(uint32);
+
+    hr = Device->CreateBuffer(&lightIndexBufferDesc, nullptr, &LightIndexBuffer);
+
+    // SRV (for Pixel Shader)
+    srvDesc.Buffer.NumElements = MAX_LIGHTS_PER_TILE * MAX_TILES;
+    hr = Device->CreateShaderResourceView(LightIndexBuffer, &srvDesc, &LightIndexBufferSRV);
+
+    // UAV (for Compute Shader)
+    D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+    uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+    uavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+    uavDesc.Buffer.FirstElement = 0;
+    uavDesc.Buffer.NumElements = MAX_LIGHTS_PER_TILE * MAX_TILES;
+
+    hr = Device->CreateUnorderedAccessView(LightIndexBuffer, &uavDesc, &LightIndexBufferUAV);
 }
 
 void FGraphicsDevice::ReleaseDeviceAndSwapChain()
@@ -480,6 +549,26 @@ void FGraphicsDevice::ReleaseBlendState()
     }
 }
 
+void FGraphicsDevice::ReleaseForwardPlusResources()
+{
+    // SRVs & UAV
+    if (PointLightBufferSRV_CenterAndRadius) { PointLightBufferSRV_CenterAndRadius->Release(); PointLightBufferSRV_CenterAndRadius = nullptr; }
+    if (PointLightBufferSRV_Color) { PointLightBufferSRV_Color->Release(); PointLightBufferSRV_Color = nullptr; }
+    if (SpotLightBufferSRV_CenterAndRadius) { SpotLightBufferSRV_CenterAndRadius->Release(); SpotLightBufferSRV_CenterAndRadius = nullptr; }
+    if (SpotLightBufferSRV_Color) { SpotLightBufferSRV_Color->Release(); SpotLightBufferSRV_Color = nullptr; }
+    if (SpotLightBufferSRV_SpotParams) { SpotLightBufferSRV_SpotParams->Release(); SpotLightBufferSRV_SpotParams = nullptr; }
+    if (LightIndexBufferSRV) { LightIndexBufferSRV->Release(); LightIndexBufferSRV = nullptr; }
+    if (LightIndexBufferUAV) { LightIndexBufferUAV->Release(); LightIndexBufferUAV = nullptr; }
+
+    // Buffers
+    if (PointLightBuffer_CenterAndRadius) { PointLightBuffer_CenterAndRadius->Release(); PointLightBuffer_CenterAndRadius = nullptr; }
+    if (PointLightBuffer_Color) { PointLightBuffer_Color->Release(); PointLightBuffer_Color = nullptr; }
+    if (SpotLightBuffer_CenterAndRadius) { SpotLightBuffer_CenterAndRadius->Release(); SpotLightBuffer_CenterAndRadius = nullptr; }
+    if (SpotLightBuffer_Color) { SpotLightBuffer_Color->Release(); SpotLightBuffer_Color = nullptr; }
+    if (SpotLightBuffer_SpotParams) { SpotLightBuffer_SpotParams->Release(); SpotLightBuffer_SpotParams = nullptr; }
+    if (LightIndexBuffer) { LightIndexBuffer->Release(); LightIndexBuffer = nullptr; }
+}
+
 void FGraphicsDevice::Release() 
 {
     ReleaseRasterizerState();
@@ -494,6 +583,7 @@ void FGraphicsDevice::Release()
     ReleaseFrameBuffer();
     ReleaseDepthStencilResources();
     ReleaseDeviceAndSwapChain();
+    ReleaseForwardPlusResources();
     ReleaseBlendState();
 }
 

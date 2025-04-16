@@ -286,6 +286,66 @@ void FShaderManager::ReleaseShader(ID3D11InputLayout* layout, ID3D11VertexShader
     }
 }
 
+bool FShaderManager::CreateComputeShader(
+    const FWString& csPath,
+    const FString& csEntry,
+    ID3D11ComputeShader*& outCS)
+{
+    DWORD shaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+    shaderFlags |= D3DCOMPILE_DEBUG;
+    shaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
+
+    ID3DBlob* csBlob = nullptr;
+    ID3DBlob* errorBlob = nullptr; // 에러 메시지를 저장할 Blob
+
+    HRESULT hr = D3DCompileFromFile(
+        csPath.c_str(),         // 셰이더 파일 경로
+        nullptr,                // 매크로 정의 (필요시 추가)
+        nullptr,                // Include 핸들러 (필요시 추가)
+        *csEntry,               // 진입점 함수 이름
+        "cs_5_0",               // 셰이더 모델 (Compute Shader 5.0)
+        shaderFlags,            // 컴파일 플래그
+        0,                      // Effect 컴파일 플래그
+        &csBlob,                // 컴파일된 셰이더 바이트코드
+        &errorBlob              // 컴파일 에러 메시지
+    );
+
+    if (FAILED(hr))
+    {
+        if (errorBlob)
+        {
+            // 에러 메시지가 있으면 출력하고 Blob 해제
+            OutputDebugStringA(static_cast<char*>(errorBlob->GetBufferPointer()));
+            MessageBoxA(NULL, static_cast<char*>(errorBlob->GetBufferPointer()), "Shader Compile Error", MB_ICONERROR | MB_OK);
+            errorBlob->Release();
+        }
+        else
+        {
+            // 에러 Blob이 없는 경우 (파일을 찾지 못함 등)
+            FWString errorMsg = L"Failed to compile compute shader: " + csPath;
+            MessageBoxW(NULL, errorMsg.c_str(), L"Shader Compile Error", MB_ICONERROR | MB_OK);
+        }
+
+        if (csBlob) csBlob->Release(); // 혹시 Blob이 생성되었을 경우 해제
+        return false;
+    }
+
+    // 컴파일 성공 시 에러 Blob 해제
+    if (errorBlob) errorBlob->Release();
+
+    // 컴퓨트 셰이더 객체 생성
+    hr = Device->CreateComputeShader(csBlob->GetBufferPointer(), csBlob->GetBufferSize(), nullptr, &outCS);
+    csBlob->Release(); // Blob은 더 이상 필요 없으므로 해제
+
+    if (FAILED(hr))
+    {
+        MessageBoxW(NULL, L"Failed to create compute shader object.", L"Error", MB_ICONERROR | MB_OK);
+        return false;
+    }
+
+    return true;
+}
+
 //void FShaderManager::ClearVertexShader(ID3D11VertexShader* VertexShader)
 //{
 //    if (VertexShader)

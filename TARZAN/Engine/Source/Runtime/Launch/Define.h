@@ -332,6 +332,20 @@ struct FConstants {
     FVector2D ViewportSize;
 };
 
+// Forward+ 프레임 상수 버퍼 구조체
+struct alignas(16) FForwardPlusFrameConstants
+{
+    FMatrix Projection;
+    FMatrix ProjectionInv;
+    FVector CameraPos;
+    float AlphaTest; // 예시, hlsl의 fAlphaTest 대응
+    uint32 NumLights; // Point(16bit) + Spot(16bit)
+    uint32 WindowWidth;
+    uint32 WindowHeight;
+    uint32 MaxNumLightsPerTile; // hlsl의 uMaxNumLightsPerTile 대응
+    // HLSL과 패딩 규칙 일치 확인 필요
+};
+
 #pragma region Uber
 struct FObjectMatrixConstants 
 {

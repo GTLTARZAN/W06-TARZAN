@@ -54,12 +54,25 @@ public:
         ID3D11PixelShader* backUpPS,
         ELightingModel lightingModel = ELightingModel::None);
 
+    // 매크로를 직접 전달받는 CreatePixelShader 오버로드 추가
+    bool CreatePixelShader(
+        const FWString& psPath,
+        const FString& psEntry,
+        ID3D11PixelShader*& outPS,
+        const D3D_SHADER_MACRO* pDefines); // 매크로 인자 추가
+
     // 기존 CreatePixelShader
     bool CreatePixelShader(
         const FWString& psPath,
         const FString& psEntry,
         ID3D11PixelShader*& outPS,
         ELightingModel lightingModel = ELightingModel::None);
+
+    // 컴퓨트 셰이더 생성 함수 추가
+    bool CreateComputeShader(
+        const FWString& csPath,
+        const FString& csEntry,
+        ID3D11ComputeShader*& outCS);
 
     void ReleaseShader(ID3D11InputLayout* layout, ID3D11VertexShader* vs, ID3D11PixelShader* ps);
 

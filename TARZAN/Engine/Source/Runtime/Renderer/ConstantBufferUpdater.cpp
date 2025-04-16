@@ -207,6 +207,22 @@ void FConstantBufferUpdater::UpdateScreenConstant(ID3D11Buffer* ScreenConstantBu
     }
 }
 
+void FConstantBufferUpdater::UpdateForwardPlusFrameConstants(ID3D11Buffer* ConstantBuffer, const FForwardPlusFrameConstants& constant) const
+{
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+    HRESULT hr = DeviceContext->Map(ConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+    if (SUCCEEDED(hr))
+    {
+        memcpy(mappedResource.pData, &constant, sizeof(FForwardPlusFrameConstants));
+        DeviceContext->Unmap(ConstantBuffer, 0);
+    }
+    else
+    {
+        // 에러 처리 (예: 로그 출력)
+        UE_LOG(LogLevel::Error, "Failed to map ForwardPlusFrameConstantBuffer.");
+    }
+}
+
 void FConstantBufferUpdater::UpdateObjectMatrixConstants(ID3D11Buffer* ObjectMatrixConstantBuffer, const FObjectMatrixConstants& ObjectMatrix) const
 {
     if (ObjectMatrixConstantBuffer)
@@ -264,5 +280,87 @@ void FConstantBufferUpdater::UpdateMaterialConstants(ID3D11Buffer* MaterialConst
         constants->SpecularScalar = Material.SpecularScalar;
         constants->EmmisiveColor = Material.EmmisiveColor;
         DeviceContext->Unmap(MaterialConstantBuffer, 0);
+    }
+}
+
+// Forward+ Light Buffer Update Functions
+void FConstantBufferUpdater::UpdatePointLightBuffers(
+    ID3D11Buffer* CenterRadiusBuffer,
+    ID3D11Buffer* ColorBuffer,
+    const TArray<FVector4>& CenterRadiusData,
+    const TArray<FVector4>& ColorData,
+    uint32 LightCount) const
+{
+    if (LightCount == 0 || !CenterRadiusBuffer || !ColorBuffer) return;
+
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+
+    // CenterRadius Buffer
+    if (SUCCEEDED(DeviceContext->Map(CenterRadiusBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource)))
+    {
+        memcpy(mappedResource.pData, CenterRadiusData.GetData(), sizeof(FVector4) * LightCount);
+        DeviceContext->Unmap(CenterRadiusBuffer, 0);
+    }
+    else
+    {
+        UE_LOG(LogLevel::Error, "Failed to map PointLightBuffer_CenterAndRadius.");
+    }
+
+    // Color Buffer
+    if (SUCCEEDED(DeviceContext->Map(ColorBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource)))
+    {
+        memcpy(mappedResource.pData, ColorData.GetData(), sizeof(FVector4) * LightCount);
+        DeviceContext->Unmap(ColorBuffer, 0);
+    }
+    else
+    {
+        UE_LOG(LogLevel::Error, "Failed to map PointLightBuffer_Color.");
+    }
+}
+
+void FConstantBufferUpdater::UpdateSpotLightBuffers(
+    ID3D11Buffer* CenterRadiusBuffer,
+    ID3D11Buffer* ColorBuffer,
+    ID3D11Buffer* ParamsBuffer,
+    const TArray<FVector4>& CenterRadiusData,
+    const TArray<FVector4>& ColorData,
+    const TArray<FVector4>& ParamsData,
+    uint32 LightCount) const
+{
+    if (LightCount == 0 || !CenterRadiusBuffer || !ColorBuffer || !ParamsBuffer) return;
+
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+
+    // CenterRadius Buffer
+    if (SUCCEEDED(DeviceContext->Map(CenterRadiusBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource)))
+    {
+        memcpy(mappedResource.pData, CenterRadiusData.GetData(), sizeof(FVector4) * LightCount);
+        DeviceContext->Unmap(CenterRadiusBuffer, 0);
+    }
+    else
+    {
+        UE_LOG(LogLevel::Error, "Failed to map SpotLightBuffer_CenterAndRadius.");
+    }
+
+    // Color Buffer
+    if (SUCCEEDED(DeviceContext->Map(ColorBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource)))
+    {
+        memcpy(mappedResource.pData, ColorData.GetData(), sizeof(FVector4) * LightCount);
+        DeviceContext->Unmap(ColorBuffer, 0);
+    }
+    else
+    {
+        UE_LOG(LogLevel::Error, "Failed to map SpotLightBuffer_Color.");
+    }
+
+    // Params Buffer
+    if (SUCCEEDED(DeviceContext->Map(ParamsBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource)))
+    {
+        memcpy(mappedResource.pData, ParamsData.GetData(), sizeof(FVector4) * LightCount);
+        DeviceContext->Unmap(ParamsBuffer, 0);
+    }
+    else
+    {
+        UE_LOG(LogLevel::Error, "Failed to map SpotLightBuffer_SpotParams.");
     }
 }

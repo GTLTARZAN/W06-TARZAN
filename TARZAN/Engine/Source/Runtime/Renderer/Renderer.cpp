@@ -96,7 +96,139 @@ void FRenderer::RenderPass()
 
     RenderLightPass();
 #else
-    RenderUberPass();
+    uint32 pointLightCount = 0; // 스코프 밖으로 이동
+    uint32 spotLightCount = 0;  // 스코프 밖으로 이동
+
+    // --- Update Light Buffers Start ---
+    {
+        // 임시 버퍼 준비 (CPU)
+        TArray<FVector4> pointLightCenterRadiusData; pointLightCenterRadiusData.Reserve(LightObjs.Num());
+        TArray<FVector4> pointLightColorData; pointLightColorData.Reserve(LightObjs.Num());
+        TArray<FVector4> spotLightCenterRadiusData; spotLightCenterRadiusData.Reserve(LightObjs.Num());
+        TArray<FVector4> spotLightColorData; spotLightColorData.Reserve(LightObjs.Num());
+        TArray<FVector4> spotLightParamsData; spotLightParamsData.Reserve(LightObjs.Num());
+
+        for (ULightComponentBase* LightComp : LightObjs)
+        {
+            if (!LightComp || !LightComp->IsVisible()) continue;
+
+            if (USpotLightComponent* SpotLight = Cast<USpotLightComponent>(LightComp))
+            {
+                FVector position = SpotLight->GetWorldLocation();
+                float radius = SpotLight->GetRadius();
+                FLinearColor color = SpotLight->GetColor() * SpotLight->GetIntensity(); // Intensity 곱하기
+                FVector direction = SpotLight->GetForwardVector();
+                float innerAngleRad = DirectX::XMConvertToRadians(SpotLight->GetInnerConeAngle());
+                float outerAngleRad = DirectX::XMConvertToRadians(SpotLight->GetOuterConeAngle());
+                float cosOuter = cosf(outerAngleRad);
+                float cosInner = cosf(innerAngleRad);
+                // SpotParams: Dir.xy, CosOuterAngle, (CosInnerAngle - CosOuterAngle)
+                // HLSL의 SpotLightBufferSpotParams 구조와 일치시켜야 함. 셰이더 코드를 다시 확인 필요.
+                // 일단 HLSL 샘플 코드 기준으로 구현
+                // float coneScale = 1.0f / max(0.001f, cosInner - cosOuter);
+                // float coneOffset = -cosOuter * coneScale;
+                // 여기서는 HLSL에서 직접 계산하도록 각도 관련 정보만 넘김
+                // 예시: HLSL의 SpotLightBufferSpotParams 구조가 { Dir.xy, InnerAngle, OuterAngle } 라고 가정
+                FVector4 spotParam = FVector4(direction.x, direction.y, innerAngleRad, outerAngleRad); 
+
+                spotLightCenterRadiusData.Add(FVector4(position.x, position.y, position.z, radius));
+                spotLightColorData.Add(FVector4(color.R, color.G, color.B, 1.0f)); // 마지막은 사용 안함
+                spotLightParamsData.Add(spotParam);
+                spotLightCount++;
+            }
+            else if (UPointLightComponent* PointLight = Cast<UPointLightComponent>(LightComp))
+            {
+                FVector position = PointLight->GetWorldLocation();
+                float radius = PointLight->GetRadius();
+                FLinearColor color = PointLight->GetColor() * PointLight->GetIntensity(); // Intensity 곱하기
+
+                pointLightCenterRadiusData.Add(FVector4(position.x, position.y, position.z, radius));
+                pointLightColorData.Add(FVector4(color.R, color.G, color.B, 1.0f)); // 마지막은 사용 안함
+                pointLightCount++;
+            }
+        }
+
+        // Call ConstantBufferUpdater to update GPU buffers
+        ConstantBufferUpdater.UpdatePointLightBuffers(
+            Graphics->PointLightBuffer_CenterAndRadius,
+            Graphics->PointLightBuffer_Color,
+            pointLightCenterRadiusData,
+            pointLightColorData,
+            pointLightCount);
+
+        ConstantBufferUpdater.UpdateSpotLightBuffers(
+            Graphics->SpotLightBuffer_CenterAndRadius,
+            Graphics->SpotLightBuffer_Color,
+            Graphics->SpotLightBuffer_SpotParams,
+            spotLightCenterRadiusData,
+            spotLightColorData,
+            spotLightParamsData,
+            spotLightCount);
+    }
+    // --- Update Light Buffers End ---
+
+    // --- Forward+ Light Culling Pass Start ---
+    {
+        // 1. Update Constant Buffer (cbPerFrame)
+        FForwardPlusFrameConstants frameConsts;
+        frameConsts.Projection = ActiveViewport->GetProjectionMatrix();
+        frameConsts.ProjectionInv = FMatrix::Inverse(frameConsts.Projection);
+        frameConsts.CameraPos = ActiveViewport->GetCameraLocation();
+        frameConsts.AlphaTest = 0.5f; // 예시값, 필요시 설정
+        // 실제 Point Light 및 Spot Light 개수 사용
+        frameConsts.NumLights = (spotLightCount << 16) | (pointLightCount & 0xFFFF); // 이제 접근 가능해야 함
+        frameConsts.WindowWidth = Graphics->screenWidth;
+        frameConsts.WindowHeight = Graphics->screenHeight;
+        frameConsts.MaxNumLightsPerTile = 544; // ForwardPlusCommon.hlsl과 일치
+
+        ConstantBufferUpdater.UpdateForwardPlusFrameConstants(ForwardPlusFrameConstantBuffer, frameConsts);
+
+        // 2. Set Compute Shader
+        Graphics->DeviceContext->CSSetShader(ForwardPlusTilingCS, nullptr, 0);
+
+        // 3. Set Input Resources (SRV)
+        ID3D11ShaderResourceView* csSRVs[] = {
+            Graphics->PointLightBufferSRV_CenterAndRadius, // t0
+            Graphics->SpotLightBufferSRV_CenterAndRadius,  // t1
+            Graphics->DepthStencilSRV                    // t2
+        };
+        Graphics->DeviceContext->CSSetShaderResources(0, ARRAYSIZE(csSRVs), csSRVs);
+
+        // 4. Set Output Resources (UAV)
+        ID3D11UnorderedAccessView* csUAVs[] = { Graphics->LightIndexBufferUAV }; // u0
+        UINT initialCounts[] = { 0 }; // 카운터 초기화 (Append/Consume 버퍼 아님)
+        Graphics->DeviceContext->CSSetUnorderedAccessViews(0, ARRAYSIZE(csUAVs), csUAVs, initialCounts);
+
+        // 5. Set Constant Buffer
+        Graphics->DeviceContext->CSSetConstantBuffers(1, 1, &ForwardPlusFrameConstantBuffer); // b1
+
+        // 6. Dispatch
+        const UINT TILE_RES = 16;
+        UINT dispatchX = (Graphics->screenWidth + TILE_RES - 1) / TILE_RES;
+        UINT dispatchY = (Graphics->screenHeight + TILE_RES - 1) / TILE_RES;
+        Graphics->DeviceContext->Dispatch(dispatchX, dispatchY, 1);
+
+        // 7. Unbind Resources
+        ID3D11ShaderResourceView* nullSRVs[] = { nullptr, nullptr, nullptr };
+        Graphics->DeviceContext->CSSetShaderResources(0, ARRAYSIZE(nullSRVs), nullSRVs);
+        ID3D11UnorderedAccessView* nullUAVs[] = { nullptr };
+        Graphics->DeviceContext->CSSetUnorderedAccessViews(0, ARRAYSIZE(nullUAVs), nullUAVs, nullptr);
+        ID3D11Buffer* nullBuffers[] = { nullptr };
+        Graphics->DeviceContext->CSSetConstantBuffers(1, 1, nullBuffers);
+        Graphics->DeviceContext->CSSetShader(nullptr, nullptr, 0);
+    }
+    // --- Forward+ Light Culling Pass End ---
+
+    // --- Forward+ Main Rendering Pass Start ---
+    // Bind LightIndexBuffer SRV to Pixel Shader stage (t7)
+    Graphics->DeviceContext->PSSetShaderResources(7, 1, &Graphics->LightIndexBufferSRV);
+
+    RenderUberPass(); // 기존 Uber Shader 렌더링 패스 호출
+
+    // Unbind LightIndexBuffer SRV
+    ID3D11ShaderResourceView* nullSRV = nullptr;
+    Graphics->DeviceContext->PSSetShaderResources(7, 1, &nullSRV);
+    // --- Forward+ Main Rendering Pass End ---
 #endif
 
     RenderPostProcessPass();
@@ -182,6 +314,14 @@ void FRenderer::CreateShader()
     // Fog Shader
     ShaderManager.CreatePixelShader(
         L"Shaders/PostProcessPixelShader.hlsl", "mainPS", PostProcessPassPS, nullptr);
+
+    // Forward+ Shaders 로드 (일단은 GBuffer와 상관없이 로드)
+    ShaderManager.CreateComputeShader(L"Shaders/ForwadPlus/ForwardPlusTiling.hlsl", "CullLightsCS", ForwardPlusTilingCS);
+    // Forward+ Pixel Shader 로드 - 기존 Uber Shader를 활용하거나 전용 PS를 로드
+    // 예시: 전용 PS 로드 (매크로 설정 필요할 수 있음)
+    // ShaderManager.CreatePixelShader(L"Shaders/ForwadPlus/ForwardPluss.hlsl", "RenderScenePS", ForwardPlusPS);
+    // 예시: Uber Shader 활용 (매크로 전달 기능 필요)
+    // ShaderManager.CreatePixelShader(L"Shaders/Uber.hlsl", "Uber_PS", ForwardPlusPS, nullptr, ELightingModel::ForwardPlus); // FShaderManager 수정 필요
 }
 
 void FRenderer::CreateUberShader()
@@ -465,6 +605,7 @@ void FRenderer::CreateConstantBuffer()
     FogConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FFogConstants));
 
     ScreenConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FScreenConstants));
+    ForwardPlusFrameConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FForwardPlusFrameConstants));
 }
 
 void FRenderer::ReleaseConstantBuffer()
@@ -483,6 +624,7 @@ void FRenderer::ReleaseConstantBuffer()
     RenderResourceManager.ReleaseBuffer(LPMaterialConstantBuffer);
     RenderResourceManager.ReleaseBuffer(FogConstantBuffer);
     RenderResourceManager.ReleaseBuffer(ScreenConstantBuffer);
+    RenderResourceManager.ReleaseBuffer(ForwardPlusFrameConstantBuffer);
 }
 #pragma endregion ConstantBuffer
 
