@@ -80,6 +80,8 @@ void FRenderer::Render()
         RenderPass();
     }
 
+    CheckGenerateLightTree();
+
     ClearRenderArr();
     RenderImGui();
     GEngine->graphicDevice.SwapBuffer();
@@ -741,9 +743,32 @@ void FRenderer::RenderStaticMeshes()
         FDirectionalLightInfo DirectionalLight;
         std::unique_ptr<FPointLightArrayInfo> PointLightArrayInfo = std::make_unique<FPointLightArrayInfo>();
         std::unique_ptr<FSpotLightArrayInfo> SpotLightArrayInfo = std::make_unique<FSpotLightArrayInfo>();
+        
+        if (PointLightTree.GetActive()) 
+        {
+            TArray<ULightComponentBase*> lightArray = PointLightTree.GetLightCutLights(StaticMeshComp);
+
+            for (int i = 0; i < lightArray.Num(); i++) 
+            {
+                if (lightArray[i]->IsA<UPointLightComponent>())
+                {
+                    if (UPointLightComponent* PointLight = Cast<UPointLightComponent>(lightArray[i]))
+                    {
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Color = PointLight->GetColor();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Position = PointLight->GetWorldLocation();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].Intensity = PointLight->GetIntensity();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].AttenuationRadius = PointLight->GetRadius();
+                        PointLightArrayInfo->PointLightConstants[PointLightArrayInfo->PointLightCount].LightFalloffExponent = PointLight->GetLightFalloffExponent();
+                        PointLightArrayInfo->PointLightCount++;
+                    }
+                }
+            }
+        }
+
+
         if (LightObjs.Num() > 0)
         {
-            for (int i = 0; i < LightObjs.Num(); i++) 
+            for (int i = 0; i < LightObjs.Num(); i++)
             {
                 if (LightObjs[i]->IsA<UAmbientLightComponent>())
                 {
@@ -781,7 +806,7 @@ void FRenderer::RenderStaticMeshes()
                     continue;
                 }
 
-                if (LightObjs[i]->IsA<UPointLightComponent>())
+                if (LightObjs[i]->IsA<UPointLightComponent>() && !PointLightTree.GetActive())  // PointLightTree가 켜져 있다면 그쪽에서 PointLight 처리를 해주므로
                 {
                     if (UPointLightComponent* PointLight = Cast<UPointLightComponent>(LightObjs[i]))
                     {
@@ -793,16 +818,16 @@ void FRenderer::RenderStaticMeshes()
                         PointLightArrayInfo->PointLightCount++;
                     }
                 }
-                
+
             }
         }
 
         std::unique_ptr<FFireballArrayInfo> fireballArrayInfo = std::make_unique<FFireballArrayInfo>();
-        
+
         if (FireballObjs.Num() > 0)
         {
             fireballArrayInfo->FireballCount = 0;
-        
+
             for (int i = 0; i < FireballObjs.Num(); i++)
             {
                 if (FireballObjs[i] != nullptr)
@@ -824,6 +849,7 @@ void FRenderer::RenderStaticMeshes()
                 }
             }
         }
+        
 
         FPointLightInfo PointLight;
         FSpotLightInfo SpotLight;
@@ -1049,6 +1075,38 @@ void FRenderer::HotReloadUberShader()
         CreateShader();
         CreateConstantBuffer();
     }
+}
+
+void FRenderer::CheckGenerateLightTree()
+{
+    if (bGenerateLightTree) {
+        bGenerateLightTree = false;
+        GeneratePointLightCut();
+    }
+}
+
+void FRenderer::GeneratePointLightCut()
+{
+    TArray<ULightComponentBase*> PointLightObjs;
+
+    for (int i = 0; i < LightObjs.Num(); i++) {
+        if (LightObjs[i]->IsA<UPointLightComponent>() && !LightObjs[i]->IsA<USpotLightComponent>()) {
+            PointLightObjs.Add(LightObjs[i]);
+        }
+    }
+
+    PointLightTree.Build(PointLightObjs);
+    for (int i = 0; i < StaticMeshObjs.Num(); i++) {
+        PointLightTree.ComputeLightCut(StaticMeshObjs[i]);
+    }
+    PointLightTree.SetActive(true);
+}
+
+void FRenderer::DeletePointLightCut()
+{
+    PointLightTree.ClearLightCut();
+    PointLightTree.ClearLightTree();
+    PointLightTree.SetActive(false);
 }
 
 void FRenderer::SubscribeToFogUpdates(UHeightFogComponent* HeightFog)

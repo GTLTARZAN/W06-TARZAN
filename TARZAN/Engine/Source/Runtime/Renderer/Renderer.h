@@ -13,6 +13,7 @@
 #include "ConstantBufferUpdater.h"
 #include "Pass/RenderPass.h"
 #include <filesystem>
+#include "Engine/Source/Runtime/Renderer/LightTreeNode.h"
 
 class ULightComponentBase;
 class UFireballComponent;
@@ -241,6 +242,17 @@ private:
     // Lighting
     TArray<ULightComponentBase*> LightObjs;
     TArray<UFireballComponent*> FireballObjs;
+
+    LightTree PointLightTree;
+    bool bGenerateLightTree = false;    // LightObjs와 StaticMeshObjs가 매 프레임마다 비워지고 채워지므로
+
+public:
+    void SetGenerateLightTree(bool bGenerate) { bGenerateLightTree = bGenerate; }
+    void CheckGenerateLightTree();
+    void GeneratePointLightCut(); // Tree도 만들고 Cut도 만듬
+    void DeletePointLightCut(); // Tree랑 Cut 삭제
+
+private:
 
     // Overaly
     TArray<UGizmoBaseComponent*> GizmoObjs;

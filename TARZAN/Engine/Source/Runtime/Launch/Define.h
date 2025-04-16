@@ -17,8 +17,8 @@
 #define _TCHAR_DEFINED
 
 #define Max_Fireball 300
-#define NUM_POINT_LIGHT 4
-#define NUM_SPOT_LIGHT 4
+#define NUM_POINT_LIGHT 16
+#define NUM_SPOT_LIGHT 16
 
 #include <d3d11.h>
 

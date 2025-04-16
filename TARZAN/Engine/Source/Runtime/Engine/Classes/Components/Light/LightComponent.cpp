@@ -6,6 +6,7 @@
 #include "Math/Matrix.h"
 //#include "Engine/Source/Runtime/Engine/Classes/Components/ActorComponent.h"
 #include "GameFramework/Actor.h"
+#include "Engine/Source/Runtime/Launch/EditorEngine.h"
 
 ULightComponentBase::ULightComponentBase()
     : Intensity(1.0f)
