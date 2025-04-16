@@ -31,6 +31,7 @@ struct PS_OUTPUT
     //float4 uuid : SV_Target1;
 };
 
+[earlydepthstencil]
 PS_OUTPUT main(PS_INPUT input)
 {
     PS_OUTPUT output;

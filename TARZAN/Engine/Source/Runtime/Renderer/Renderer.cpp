@@ -1007,6 +1007,9 @@ void FRenderer::RenderGizmos()
 
 void FRenderer::RenderBillboards()
 {
+    // @TODO Find Correct DepthStencilState
+    Graphics->ChangeDepthStencilState(Graphics->OverlayDepthState);
+
 #if !USE_GBUFFER
     PrepareTextureShader();
     PrepareSubUVConstant();
