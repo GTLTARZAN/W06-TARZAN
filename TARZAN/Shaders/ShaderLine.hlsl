@@ -459,21 +459,37 @@ PS_INPUT mainVS(VS_INPUT input)
     else
     {
         uint lineInstanceID = input.instanceID - lineInstanceStart;
-        uint lineIndex = lineInstanceID / 6;
-        uint segmentID = (lineInstanceID % 6) / 2;
+        uint lineIndex = lineInstanceID / 10;
+        uint segmentID = (lineInstanceID % 10) / 2;
         
         float3 basePos = input.vertexID == 0 ? g_Lines[lineIndex].LineStart : g_Lines[lineIndex].LineEnd;
         float3 lineDir = normalize(g_Lines[lineIndex].LineEnd - g_Lines[lineIndex].LineStart);
         float3 perp = ComputePerpVector(lineDir);
-        float offsetDistance = 1.0f;
+        float offsetDistance = 0.3f;
         float3 finalPos = basePos;
         if (segmentID == 1)
         {
             finalPos += offsetDistance * perp;
+            if (input.vertexID == 1)
+            {
+                finalPos += -lineDir * 0.5f;
+            }
         }
         else if (segmentID == 2)
         {
             finalPos -= offsetDistance * perp;
+            if (input.vertexID == 1)
+            {
+                finalPos += -lineDir * 0.5f;
+            }
+        }
+        else if (segmentID == 3)
+        {
+            finalPos += 2 * offsetDistance * perp;
+        }
+        else if (segmentID == 4)
+        {
+            finalPos -= 2 * offsetDistance * perp;
         }
     
         pos = finalPos;

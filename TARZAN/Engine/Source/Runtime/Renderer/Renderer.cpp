@@ -1176,7 +1176,7 @@ void FRenderer::RenderLight()
             {
                 if (GEngine->GetWorld()->WorldType == EWorldType::PIE) continue;
                 FMatrix Model = JungleMath::CreateModelMatrix(DirectionalLight->GetWorldLocation(), DirectionalLight->GetWorldRotation(), { 1, 1, 1 });
-                UPrimitiveBatch::GetInstance().AddLine(DirectionalLight->GetWorldLocation(), DirectionalLight->GetWorldLocation() + DirectionalLight->GetDirection() * 5.0f, DirectionalLight->GetColor());
+                UPrimitiveBatch::GetInstance().AddLine(DirectionalLight->GetWorldLocation(), DirectionalLight->GetWorldLocation() + DirectionalLight->GetDirection() * 3.0f, DirectionalLight->GetColor());
             }
         }
     }
@@ -1192,7 +1192,7 @@ void FRenderer::RenderBatch(
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
     UINT vertexCountPerInstance = 2;
-    UINT instanceCount = gridParam.numGridLines + 3 + (boundingBoxCount * 12) + (coneCount * (2 * coneSegmentCount + 10)) + (12 * obbCount) + (3 * circleCount * (circleSegmentCount)) + 6 * lineCount;
+    UINT instanceCount = gridParam.numGridLines + 3 + (boundingBoxCount * 12) + (coneCount * (2 * coneSegmentCount + 10)) + (12 * obbCount) + (3 * circleCount * (circleSegmentCount)) + 10 * lineCount;
     Graphics->DeviceContext->DrawInstanced(vertexCountPerInstance, instanceCount, 0, 0);
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
