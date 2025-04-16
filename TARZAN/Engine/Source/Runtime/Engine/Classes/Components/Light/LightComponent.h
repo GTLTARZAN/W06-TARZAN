@@ -1,7 +1,7 @@
 #pragma once
 #include "Define.h"
 #include "Components/SceneComponent.h"
-class UBillboardComponent;
+#include "Components/UBillboardComponent.h"
 
 class ULightComponentBase : public USceneComponent
 {
@@ -13,12 +13,25 @@ public:
 
     virtual void TickComponent(float DeltaTime) override;
     virtual void InitializeLight();
-    void SetColor(FLinearColor InColor);
-    FLinearColor GetColor() const;
-    void SetIntensity(float InIntensity);
-    float GetIntensity() const;
-    void SetVisible(bool bVisible);
-    bool IsVisible() const;
+    void SetColor(FLinearColor InColor) 
+    {
+        LightColor = InColor;
+        if (Texture2D)
+        {
+            Texture2D->SetTintColor(LightColor);
+        }
+    }
+    FLinearColor GetColor() const { return LightColor; }
+    void SetIntensity(float InIntensity) { Intensity = InIntensity; }
+    float GetIntensity() const { return Intensity; }
+    void SetVisible(bool InbVisible) { bVisible = InbVisible; }
+    bool IsVisible() const { return bVisible; }
+    void SetTexture2D(UBillboardComponent* InBillComp) 
+    {
+        Texture2D = InBillComp; 
+        Texture2D->SetIsLightIcon(true);
+    }
+    UBillboardComponent* GetTexture2D() const { return Texture2D; }
 
     virtual void InitializeComponent() {};
 
@@ -27,10 +40,6 @@ protected:
     FLinearColor LightColor;
     bool bVisible;
     UBillboardComponent* Texture2D;
-
-public:
-    FLinearColor GetColor() {return LightColor;}
-    UBillboardComponent* GetTexture2D() const {return Texture2D;}
 };
 
 class ULightComponent : public ULightComponentBase

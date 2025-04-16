@@ -26,7 +26,7 @@ struct FireballConstants
     float RadiusFallOff;
     float InnerAngle;
     float OuterAngle;
-    float4 FireballColor;
+    float4 FireballColor; 
     float3 Direction;
     int LightType; // 0: Point, 1: Spot
 };

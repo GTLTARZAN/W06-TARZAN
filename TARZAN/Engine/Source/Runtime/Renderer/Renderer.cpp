@@ -383,6 +383,8 @@ void FRenderer::PrepareTextureShader() const
     if (ConstantBuffer)
     {
         Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ConstantBuffer);
+
+        Graphics->DeviceContext->PSSetConstantBuffers(3, 1, &TextureMaterialConstants);
     }
 }
 
@@ -430,8 +432,6 @@ void FRenderer::PrepareLineShader() const
         Graphics->DeviceContext->VSSetShaderResources(3, 1, &pConeSRV);
         Graphics->DeviceContext->VSSetShaderResources(4, 1, &pOBBSRV);
         Graphics->DeviceContext->VSSetShaderResources(5, 1, &pCircleSRV);
-
-
     }
 }
 #pragma endregion Shader
@@ -459,7 +459,7 @@ void FRenderer::CreateConstantBuffer()
     LightConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FLightConstants));
     MaterialConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FMaterialConstants));
 #endif
-
+    TextureMaterialConstants = RenderResourceManager.CreateConstantBuffer(sizeof(FTextureMaterialConstants));
 
     LPLightConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FLightConstant));
     FireballConstantBuffer = RenderResourceManager.CreateConstantBuffer(sizeof(FFireballArrayInfo));
@@ -485,6 +485,7 @@ void FRenderer::ReleaseConstantBuffer()
     RenderResourceManager.ReleaseBuffer(LPMaterialConstantBuffer);
     RenderResourceManager.ReleaseBuffer(FogConstantBuffer);
     RenderResourceManager.ReleaseBuffer(ScreenConstantBuffer);
+    RenderResourceManager.ReleaseBuffer(TextureMaterialConstants);
 }
 #pragma endregion ConstantBuffer
 
@@ -720,8 +721,6 @@ void FRenderer::RenderStaticMeshes()
             StaticMeshComp->GetWorldRotation(),
             StaticMeshComp->GetWorldScale()
         );
-
-        
         
         FObjectMatrixConstants MatrixConstant =
         {
@@ -1004,9 +1003,16 @@ void FRenderer::RenderBillboards()
         ConstantBufferUpdater.UpdateObjectMatrixConstants(ObjectMatrixConstantBuffer, MatrixConstant);
 #endif
 
+        FTextureMaterialConstants TextureMatConstant =
+        {
+            .TintColor = BillboardComp->GetTintColor(),
+            .IsLightIcon = (float)BillboardComp->IsLightIcon()
+        };
+
+        ConstantBufferUpdater.UpdateTextureMaterialConstants(TextureMaterialConstants, TextureMatConstant);
+
         if (UParticleSubUVComp* SubUVParticle = Cast<UParticleSubUVComp>(BillboardComp))
         {
-
             const FQuadRenderData& QuadRenderData = UEditorEngine::resourceMgr.GetQuadRenderData();
             RenderTexturePrimitive(
                 SubUVParticle->vertexSubUVBuffer, SubUVParticle->numTextVertices,

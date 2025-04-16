@@ -330,7 +330,7 @@ float4 CalculateDirectionalLightBlinnPhong(FDirectionalLightInfo info, float3 no
         //float spec = max(dot(normal, halfDir), 0.0f);
         spec = max(dot(normal, halfDir), 0);
         spec = pow(spec, 32);
-        spec *= diff;
+        //spec *= diff;
     }
 
     //// Specular

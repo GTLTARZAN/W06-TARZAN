@@ -12,6 +12,13 @@ cbuffer UUIDConstant : register(b2)
     float4 UUID;
 }
 
+cbuffer TextureMaterialConstant : register(b3)
+{
+    float4 TintColor;
+    float IsLightIcon;
+    float3 Padding;
+}
+
 struct PS_INPUT {
     float4 position : SV_POSITION;
     float2 texCoord : TEXCOORD;
@@ -52,7 +59,19 @@ PS_OUTPUT main(PS_INPUT input)
         discard;
     }
     
-        output.Normal = float4(col.xyz, 0.5f);
+    //if (IsLightIcon)
+    //{
+    //    if (all(col > 0.7f))
+    //    {
+    //        col *= TintColor;
+    //    }
+    //}
+    //else
+    //{
+    col *= TintColor;
+    //}
+    
+    output.Normal = float4(col.xyz, 0.5f);
     output.Albedo = float4(col.xyz, 0.5f);
     //output.uuid = UUID;
     

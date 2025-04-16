@@ -410,6 +410,12 @@ struct FTextureConstants {
     float pad1;
 };
 
+struct FTextureMaterialConstants
+{
+    FLinearColor TintColor;
+    float IsLightIcon;
+};
+
 struct FSubUVConstant
 {
     float indexU;

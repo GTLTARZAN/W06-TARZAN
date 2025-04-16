@@ -266,3 +266,16 @@ void FConstantBufferUpdater::UpdateMaterialConstants(ID3D11Buffer* MaterialConst
         DeviceContext->Unmap(MaterialConstantBuffer, 0);
     }
 }
+
+void FConstantBufferUpdater::UpdateTextureMaterialConstants(ID3D11Buffer* TextureMaterialBuffer, const FTextureMaterialConstants& TexMat) const
+{
+    if (TextureMaterialBuffer)
+    {
+        D3D11_MAPPED_SUBRESOURCE constantbufferMSR;
+        DeviceContext->Map(TextureMaterialBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constantbufferMSR); // update constant buffer every frame
+        auto constants = static_cast<FTextureMaterialConstants*>(constantbufferMSR.pData);
+        constants->TintColor = TexMat.TintColor;
+        constants->IsLightIcon = TexMat.IsLightIcon;
+        DeviceContext->Unmap(TextureMaterialBuffer, 0);
+    }
+}
