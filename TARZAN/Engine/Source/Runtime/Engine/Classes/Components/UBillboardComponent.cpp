@@ -167,19 +167,6 @@ void UBillboardComponent::SetProperties(const TMap<FString, FString>& InProperti
                 ULightComponentBase* LightComp = dynamic_cast<ULightComponentBase*>(GetAttachParent());
                 LightComp->SetTexture2D(this);
             }
-
-            //if (AActor* OwnerActor = GetOwner())
-            //{
-            //    // LightComponent를 찾아서 자동으로 연결해준다
-            //    for (UActorComponent* Comp : OwnerActor->GetComponents())
-            //    {
-            //        if (ULightComponentBase* LightComp = dynamic_cast<ULightComponentBase*>(Comp))
-            //        {
-            //            LightComp->SetTexture2D(this);
-            //            break; // 한 개만 연결되면 충분
-            //        }
-            //    }
-            //}
         }
     }
 }

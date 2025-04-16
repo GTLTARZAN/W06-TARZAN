@@ -459,8 +459,12 @@ struct FLoaderOBJ
             FVector2D deltaUV2 = uv2 - uv0;
             
             float f = deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y;
-            if (f == 0)
-                f = 1e-8f;
+            //if (f == 0)
+            //    f = 1e-8f;
+            //f = 1.0f / f;
+
+            if (abs(f) < 1e-5f)
+                continue;
             f = 1.0f / f;
 
             FVector tangent;
@@ -476,11 +480,7 @@ struct FLoaderOBJ
         for (int32 i = 0; i < OutStaticMesh.Vertices.Num(); i++)
         {
             FVector tangent = tangentSums[i].Normalize();
-            //FVector tangent = tangentSums[i];
-            //if (tangent ==  FVector::ZeroVector)
-            //    tangent = tangent.Normalize();
-            //else
-            //    tangent = FVector(1, 0, 0); // 기본 탄젠트
+
             OutStaticMesh.Vertices[i].tx = tangent.x;
             OutStaticMesh.Vertices[i].ty = tangent.y;
             OutStaticMesh.Vertices[i].tz = tangent.z;
