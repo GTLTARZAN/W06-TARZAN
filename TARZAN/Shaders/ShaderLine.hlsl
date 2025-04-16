@@ -26,6 +26,7 @@ cbuffer PrimitiveCounts : register(b3)
     int pad;
     int ConeCount; // 렌더링할 cone의 개수
     int OBBCount;
+    int CircleCount; // 렌더링할 Circle의 개수
 };
 struct FBoundingBoxData
 {
@@ -61,10 +62,20 @@ struct FOrientedBoxCornerData
     float3 corners[8]; // 회전/이동 된 월드 공간상의 8꼭짓점
 };
 
+struct FLineData
+{
+    float3 LineStart;
+    float pad0;
+    float3 LineEnd;
+    float pad1;
+    float4 Color;
+};
+
 StructuredBuffer<FBoundingBoxData> g_BoundingBoxes : register(t2);
 StructuredBuffer<FConeData> g_ConeData : register(t3);
 StructuredBuffer<FOrientedBoxCornerData> g_OrientedBoxes : register(t4);
 StructuredBuffer<FCircleData> g_Circles : register(t5);
+StructuredBuffer<FLineData> g_Lines : register(t6);
 
 static const int BB_EdgeIndices[12][2] =
 {
@@ -343,6 +354,20 @@ float3 ComputeOrientedBoxPosition(uint obIndex, uint edgeIndex, uint vertexID)
     return ob.corners[cornerID];
 }
 
+float3 ComputePerpVector(float3 lineDir)
+{
+    // 먼저 world up 벡터를 사용
+    float3 up = float3(0.0f, 1.0f, 0.0f);
+    float3 perp = cross(lineDir, up);
+    // 만약 perp 벡터가 0에 가까우면, 다른 up 벡터를 사용
+    if (length(perp) < 1e-5f)
+    {
+        up = float3(0.0f, 0.0f, 1.0f);
+        perp = cross(lineDir, up);
+    }
+    return normalize(perp);
+}
+
 /////////////////////////////////////////////////////////////////////////
 // 메인 버텍스 셰이더
 /////////////////////////////////////////////////////////////////////////
@@ -358,6 +383,7 @@ PS_INPUT mainVS(VS_INPUT input)
     // ConeCount 개수만큼이므로 총 (2 * SegmentCount * ConeCount).
     uint coneInstCnt = ConeCount * (2 * ConeSegmentCount + 10);
     uint obbInstCnt = OBBCount * 12;
+    uint circleInstCnt = CircleCount * (3 * g_Circles[0].CircleSegmentCount);
 
     // Grid / Axis / AABB 인스턴스 개수 계산
     uint gridLineCount = GridCount; // 그리드 라인
@@ -370,7 +396,9 @@ PS_INPUT mainVS(VS_INPUT input)
     uint obbInstanceStart = coneInstanceStart + coneInstCnt;
     // 3) 그 다음(= obb 구간의 끝)이 곧 Circle 시작 지점
     uint circleInstanceStart = obbInstanceStart + obbInstCnt;
-
+    
+    uint lineInstanceStart = circleInstanceStart + circleInstCnt;
+    
     // 이제 instanceID를 기준으로 분기
     if (input.instanceID < gridLineCount)
     {
@@ -420,13 +448,36 @@ PS_INPUT mainVS(VS_INPUT input)
         pos = ComputeOrientedBoxPosition(obbIndex, edgeIndex, input.vertexID);
         color = float4(0.4, 1.0, 0.4, 1.0); // 예시: 연두색
     }
-    else
+    else if (input.instanceID < lineInstanceStart)
     {
         uint circleInstanceID = input.instanceID - circleInstanceStart;
         pos = ComputeCirclePosition(circleInstanceID, input.vertexID);
         uint circleIndex = circleInstanceID / (3 * g_Circles[0].CircleSegmentCount);
         
         color = g_Circles[circleIndex].Color;
+    }
+    else
+    {
+        uint lineInstanceID = input.instanceID - lineInstanceStart;
+        uint lineIndex = lineInstanceID / 6;
+        uint segmentID = (lineInstanceID % 6) / 2;
+        
+        float3 basePos = input.vertexID == 0 ? g_Lines[lineIndex].LineStart : g_Lines[lineIndex].LineEnd;
+        float3 lineDir = normalize(g_Lines[lineIndex].LineEnd - g_Lines[lineIndex].LineStart);
+        float3 perp = ComputePerpVector(lineDir);
+        float offsetDistance = 1.0f;
+        float3 finalPos = basePos;
+        if (segmentID == 1)
+        {
+            finalPos += offsetDistance * perp;
+        }
+        else if (segmentID == 2)
+        {
+            finalPos -= offsetDistance * perp;
+        }
+    
+        pos = finalPos;
+        color = g_Lines[lineIndex].Color;
     }
 
     // 출력 변환

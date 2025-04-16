@@ -432,6 +432,7 @@ void FRenderer::PrepareLineShader() const
         Graphics->DeviceContext->VSSetShaderResources(3, 1, &pConeSRV);
         Graphics->DeviceContext->VSSetShaderResources(4, 1, &pOBBSRV);
         Graphics->DeviceContext->VSSetShaderResources(5, 1, &pCircleSRV);
+        Graphics->DeviceContext->VSSetShaderResources(6, 1, &pLineSRV);
     }
 }
 #pragma endregion Shader
@@ -1173,14 +1174,16 @@ void FRenderer::RenderLight()
             UDirectionalLightComponent* DirectionalLight = Cast<UDirectionalLightComponent>(Light);
             if (DirectionalLight) 
             {
-                // TODO: DirectionalLight의 Wireframe
+                if (GEngine->GetWorld()->WorldType == EWorldType::PIE) continue;
+                FMatrix Model = JungleMath::CreateModelMatrix(DirectionalLight->GetWorldLocation(), DirectionalLight->GetWorldRotation(), { 1, 1, 1 });
+                UPrimitiveBatch::GetInstance().AddLine(DirectionalLight->GetWorldLocation(), DirectionalLight->GetWorldLocation() + DirectionalLight->GetDirection() * 5.0f, DirectionalLight->GetColor());
             }
         }
     }
 }
 
 void FRenderer::RenderBatch(
-    const FGridParameters& gridParam, ID3D11Buffer* pVertexBuffer, int boundingBoxCount, int coneCount, int coneSegmentCount, int obbCount, int circleCount, int circleSegmentCount
+    const FGridParameters& gridParam, ID3D11Buffer* pVertexBuffer, int boundingBoxCount, int coneCount, int coneSegmentCount, int obbCount, int circleCount, int circleSegmentCount, int lineCount
 ) const
 {
     UINT stride = sizeof(FSimpleVertex);
@@ -1189,7 +1192,7 @@ void FRenderer::RenderBatch(
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 
     UINT vertexCountPerInstance = 2;
-    UINT instanceCount = gridParam.numGridLines + 3 + (boundingBoxCount * 12) + (coneCount * (2 * coneSegmentCount + 10)) + (12 * obbCount) + (3 * circleCount * (circleSegmentCount));
+    UINT instanceCount = gridParam.numGridLines + 3 + (boundingBoxCount * 12) + (coneCount * (2 * coneSegmentCount + 10)) + (12 * obbCount) + (3 * circleCount * (circleSegmentCount)) + 6 * lineCount;
     Graphics->DeviceContext->DrawInstanced(vertexCountPerInstance, instanceCount, 0, 0);
     Graphics->DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
@@ -1464,6 +1467,18 @@ ID3D11ShaderResourceView* FRenderer::CreateCircleSRV(ID3D11Buffer* pCircleBuffer
     return pCircleSRV;
 }
 
+ID3D11ShaderResourceView* FRenderer::CreateLineSRV(ID3D11Buffer* pLineBuffer, UINT numLines)
+{
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+    srvDesc.Buffer.ElementOffset = 0;
+    srvDesc.Buffer.NumElements = numLines;
+
+    Graphics->Device->CreateShaderResourceView(pLineBuffer, &srvDesc, &pLineSRV);
+    return pLineSRV;
+}
+
 void FRenderer::UpdateBoundingBoxBuffer(ID3D11Buffer* pBoundingBoxBuffer, const TArray<FBoundingBox>& BoundingBoxes, int numBoundingBoxes) const
 {
     if (!pBoundingBoxBuffer) return;
@@ -1516,6 +1531,19 @@ void FRenderer::UpdateCirclesBuffer(ID3D11Buffer* pCircleBuffer, const TArray<FC
     Graphics->DeviceContext->Unmap(pCircleBuffer, 0);
 }
 
+void FRenderer::UpdateLinesBuffer(ID3D11Buffer* pLineBuffer, const TArray<FLine>& Lines, int numLines) const
+{
+    if (!pLineBuffer) return;
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+    Graphics->DeviceContext->Map(pLineBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+    auto pData = reinterpret_cast<FLine*>(mappedResource.pData);
+    for (int i = 0; i < Lines.Num(); ++i)
+    {
+        pData[i] = Lines[i];
+    }
+    Graphics->DeviceContext->Unmap(pLineBuffer, 0);
+}
+
 void FRenderer::UpdateGridConstantBuffer(const FGridParameters& gridParams) const
 {
     D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -1531,7 +1559,7 @@ void FRenderer::UpdateGridConstantBuffer(const FGridParameters& gridParams) cons
     }
 }
 
-void FRenderer::UpdateLinePrimitveCountBuffer(int numBoundingBoxes, int numCones, int numOBBs) const
+void FRenderer::UpdateLinePrimitveCountBuffer(int numBoundingBoxes, int numCones, int numOBBs, int numCircles) const
 {
     D3D11_MAPPED_SUBRESOURCE mappedResource;
     HRESULT hr = Graphics->DeviceContext->Map(LinePrimitiveBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -1539,6 +1567,7 @@ void FRenderer::UpdateLinePrimitveCountBuffer(int numBoundingBoxes, int numCones
     pData->BoundingBoxCount = numBoundingBoxes;
     pData->ConeCount = numCones;
     pData->OBBCount = numOBBs;
+    pData->CircleCount = numCircles;
     Graphics->DeviceContext->Unmap(LinePrimitiveBuffer, 0);
 }
 

@@ -291,12 +291,22 @@ struct FCircle
     FLinearColor Color;
 };
 
+struct FLine 
+{
+    FVector LineStart; // 시작점
+    float pad0;
+    FVector LineEnd;   // 끝점
+    float pad1;
+    FLinearColor LineColor; // 색상
+};
+
 struct FPrimitiveCounts 
 {
 	int BoundingBoxCount;
 	int pad;
 	int ConeCount; 
     int OBBCount;
+    int CircleCount;
 };
 struct FLighting
 {
