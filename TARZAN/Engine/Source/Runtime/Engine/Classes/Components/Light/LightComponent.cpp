@@ -17,17 +17,7 @@ ULightComponentBase::ULightComponentBase()
 
 ULightComponentBase::~ULightComponentBase()
 {
-    delete Texture2D;
-}
-
-void ULightComponentBase::SetColor(FLinearColor InColor)
-{
-    LightColor = InColor;
-}
-
-FLinearColor ULightComponentBase::GetColor() const
-{
-    return LightColor;
+    //delete Texture2D;
 }
 
 void ULightComponentBase::InitializeLight()
@@ -43,26 +33,6 @@ void ULightComponentBase::TickComponent(float DeltaTime)
 
     Texture2D->TickComponent(DeltaTime);
     Texture2D->SetLocation(GetWorldLocation());
-}
-
-void ULightComponentBase::SetIntensity(float InIntensity)
-{
-    Intensity = InIntensity;
-}
-
-float ULightComponentBase::GetIntensity() const
-{
-    return Intensity;
-}
-
-void ULightComponentBase::SetVisible(bool InbVisible)
-{
-    bVisible = InbVisible;
-}
-
-bool ULightComponentBase::IsVisible() const
-{
-    return bVisible;
 }
 
 // UAmbientLightComponent

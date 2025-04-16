@@ -41,10 +41,10 @@ void ULevel::SpawnDefaultActors()
     AActor* DefaultLight = OwnerWorld->SpawnActor<AActor>();
     DefaultLight->SetActorLabel(TEXT("DirectionalLight"));
 
-    DefaultLight->AddComponent<UDirectionalLightComponent>();
+    UDirectionalLightComponent* LightComp = DefaultLight->AddComponent<UDirectionalLightComponent>();
     DefaultLight->AddComponent<UAmbientLightComponent>();
     UBillboardComponent* BillboardComponent = DefaultLight->AddComponent<UBillboardComponent>();
     BillboardComponent->SetTexture(L"Engine/Icon/DirectionalLight_64x.png");
-
+    LightComp->SetTexture2D(BillboardComponent);
     DefaultLight->SetActorLocation(FVector(0, 0, 10));
 }

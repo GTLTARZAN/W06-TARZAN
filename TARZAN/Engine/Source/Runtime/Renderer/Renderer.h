@@ -111,6 +111,7 @@ public:
     ID3D11Buffer* CameraConstantBuffer = nullptr;
     ID3D11Buffer* LightConstantBuffer = nullptr;
     ID3D11Buffer* MaterialConstantBuffer = nullptr;
+    ID3D11Buffer* TextureMaterialConstants = nullptr;
 
     ID3D11Buffer* LightingBuffer = nullptr;
     ID3D11Buffer* FlagBuffer = nullptr;

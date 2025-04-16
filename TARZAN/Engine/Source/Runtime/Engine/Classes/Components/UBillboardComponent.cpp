@@ -30,7 +30,10 @@ UBillboardComponent::~UBillboardComponent()
 	// }
 }
 
-UBillboardComponent::UBillboardComponent(const UBillboardComponent& other) : UPrimitiveComponent(other), finalIndexU(other.finalIndexU), finalIndexV(other.finalIndexV),Texture(other.Texture)
+UBillboardComponent::UBillboardComponent(const UBillboardComponent& other) 
+    : UPrimitiveComponent(other)
+    , finalIndexU(other.finalIndexU), finalIndexV(other.finalIndexV), Texture(other.Texture)
+    , TintColor(other.TintColor), bIsLightIcon(other.bIsLightIcon)
 {
 }
 
@@ -40,13 +43,10 @@ void UBillboardComponent::InitializeComponent()
 	//CreateQuadTextureVertexBuffer();
 }
 
-
-
 void UBillboardComponent::TickComponent(float DeltaTime)
 {
     Super::TickComponent(DeltaTime);
 }
-
 
 int UBillboardComponent::CheckRayIntersection(FVector& rayOrigin, FVector& rayDirection, float& pfNearHitDistance)
 {
