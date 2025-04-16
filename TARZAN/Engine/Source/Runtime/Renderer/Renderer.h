@@ -155,6 +155,7 @@ public:
     // Shader
     void CreateShader();
     void CreateUberShader(); //UberShader는 Hot Reload를 지원하므로 파트 분리 하긴 했지만.. 전체 다 하는 것이 안전할 것 같다.
+    void PrepareZPrepassShader();
     void PrepareUberShader() const;
     void PrepareShader() const;
     void PrepareLightShader() const;
@@ -175,6 +176,7 @@ public:
     void UpdateMaterial(const FObjMaterialInfo& MaterialInfo) const;
 
 private:
+    void RenderZPrepass(); // Added for Z-Prepass
     void RenderUberPass();
     // Render Pass
     void RenderGBuffer();

@@ -93,6 +93,8 @@ void FRenderer::RenderPass()
     Graphics->ChangeRasterizer(ActiveViewport->GetViewMode());
     ChangeViewMode(ActiveViewport->GetViewMode());
 
+    RenderZPrepass(); // Call Z-Prepass before main geometry pass
+
 #if USE_GBUFFER
     RenderGBuffer();
 
@@ -288,11 +290,49 @@ void FRenderer::ReleaseHotReloadShader()
     }
 }
 
+void FRenderer::PrepareZPrepassShader()
+{
+#if USE_GBUFFER
+    // Bind Shaders & Input Layout for GBuffer Path
+    if (GBufferVS && GBufferInputLayout)
+    {
+        Graphics->DeviceContext->IASetInputLayout(GBufferInputLayout);
+        Graphics->DeviceContext->VSSetShader(GBufferVS, nullptr, 0);
+        Graphics->DeviceContext->PSSetShader(nullptr, nullptr, 0); // No Pixel Shader
+
+        // Bind Constant Buffers needed by GBufferVS (Assuming ConstantBuffer holds matrices)
+        if (ConstantBuffer) // GBuffer VS uses ConstantBuffer at slot 0 (based on PrepareShader)
+        {
+             // Note: ConstantBuffer needs to be UPDATED before this call (likely inside RenderStaticMeshes loop)
+             // We are only setting the binding here.
+            Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ConstantBuffer);
+        }
+         // Material buffer (GMaterialConstantBuffer) is for PS, not needed for Z-Prepass VS
+    }
+#else
+    // Bind Shaders & Input Layout for Uber Path
+    Graphics->DeviceContext->IASetInputLayout(UberInputLayout[0]);
+    Graphics->DeviceContext->VSSetShader(NormalVS[0], nullptr, 0);
+    Graphics->DeviceContext->PSSetShader(nullptr, nullptr, 0); // No Pixel Shader needed for Z-Prepass
+
+    // Bind Constant Buffers needed by Uber VS (based on PrepareUberShader)
+    if (ObjectMatrixConstantBuffer && CameraConstantBuffer) // Check if buffers exist
+    {
+        // Note: These buffers need to be UPDATED before this call (done inside RenderStaticMeshes loop)
+        // We are only setting the bindings here.
+        Graphics->DeviceContext->VSSetConstantBuffers(0, 1, &ObjectMatrixConstantBuffer); // Slot 0: Object/World/View/Proj
+        Graphics->DeviceContext->VSSetConstantBuffers(1, 1, &CameraConstantBuffer);     // Slot 1: Camera Pos
+        // Light and Material buffers (slots 2, 3) are not needed for Z-Prepass VS
+    }
+#endif
+}
+
+
 void FRenderer::PrepareUberShader() const
 {
     Graphics->DeviceContext->IASetInputLayout(UberInputLayout[0]);
 
-    switch (ActiveViewport->GetLighitingModel())
+    switch (ActiveViewport->GetLightingModel())
     {
     case ELightingModel::None:
         UE_LOG(LogLevel::Display, "No LightingModel");
@@ -709,12 +749,6 @@ void FRenderer::RenderTexturedModelPrimitive(
 
 void FRenderer::RenderStaticMeshes()
 {
-#if USE_GBUFFER
-    PrepareShader();
-#else
-    PrepareUberShader();
-#endif
-
     for (UStaticMeshComponent* StaticMeshComp : StaticMeshObjs)
     {
         FMatrix Model = JungleMath::CreateModelMatrix(
@@ -1205,8 +1239,59 @@ void FRenderer::RenderBatch(
 #pragma endregion Render
 
 #pragma region MultiPass
+void FRenderer::RenderZPrepass()
+{
+    // 1. Store original states
+    ID3D11DepthStencilState* pOriginalDepthStencilState = nullptr;
+    UINT nOriginalStencilRef = 0;
+    Graphics->DeviceContext->OMGetDepthStencilState(&pOriginalDepthStencilState, &nOriginalStencilRef);
+
+    // Store original Render Target Views and Depth Stencil View
+    UINT numRTVs = 0;
+    // D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT is usually 8
+    ID3D11RenderTargetView* pOriginalRTVs[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { nullptr };
+    ID3D11DepthStencilView* pOriginalDSV = nullptr;
+    Graphics->DeviceContext->OMGetRenderTargets(D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, pOriginalRTVs, &pOriginalDSV);
+    // Find the actual number of bound RTVs (first null pointer)
+    for (numRTVs = 0; numRTVs < D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT; ++numRTVs) {
+        if (pOriginalRTVs[numRTVs] == nullptr) break;
+    }
+
+    // 2. Set Depth Stencil State for Z-Prepass
+    Graphics->ChangeDepthStencilState(Graphics->ZPrepassDepthStencilState); // Use Z-Prepass state
+
+    // 3. Disable Color Writes (Set Null RTV)
+    ID3D11RenderTargetView* nullRTV = nullptr;
+    Graphics->DeviceContext->OMSetRenderTargets(1, &nullRTV, Graphics->DepthStencilView); // Use the main DSV for writing depth
+
+    // 4. Set Shaders (VS only, PS = null) and Bind Constant Buffers
+    PrepareZPrepassShader();
+
+    // 5. Render Geometry (Constant buffers are updated and bound inside RenderStaticMeshes)
+    if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_Primitives))
+    {
+        RenderStaticMeshes();
+    }
+    // TODO: Potentially render other geometry types (Billboards, Skeletal Meshes if they exist)
+
+    // 6. Restore original Depth Stencil State
+    Graphics->DeviceContext->OMSetDepthStencilState(pOriginalDepthStencilState, nOriginalStencilRef);
+
+    // 7. Restore original Render Targets and Depth Stencil View
+    Graphics->DeviceContext->OMSetRenderTargets(numRTVs, pOriginalRTVs, pOriginalDSV);
+
+    // 8. Release the references obtained from OMGet... calls
+    if (pOriginalDepthStencilState) pOriginalDepthStencilState->Release();
+    for (UINT i = 0; i < numRTVs; ++i) { // Release only the RTVs that were actually bound
+        if (pOriginalRTVs[i]) pOriginalRTVs[i]->Release();
+    }
+    if (pOriginalDSV) pOriginalDSV->Release();
+}
+
 void FRenderer::RenderUberPass()
 {
+    PrepareUberShader();
+
     // StaticMesh
     if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_Primitives)) 
     {
@@ -1223,6 +1308,7 @@ void FRenderer::RenderUberPass()
 void FRenderer::RenderGBuffer()
 {
     //Graphics->DeviceContext->OMSetRenderTargets(4, Graphics->GBufferRTVs, Graphics->DepthStencilView);
+    PrepareShader();
 
     // StaticMesh
     if (ActiveViewport->GetShowFlag() & static_cast<uint64>(EEngineShowFlags::SF_Primitives))
@@ -1315,6 +1401,9 @@ void FRenderer::RenderLightPass()
 
 void FRenderer::RenderPostProcessPass()
 {
+    // Disable depth testing/writing for post-process
+    Graphics->ChangeDepthStencilState(Graphics->DepthStateDisable);
+
     // 1. Prepare Shader
     PreparePostProcessShader();
 
@@ -1352,7 +1441,11 @@ void FRenderer::RenderPostProcessPass()
 
 void FRenderer::RenderOverlayPass()
 {
-    // Enable Depth Test
+    // Use Overlay Depth State (Test On, Write Off, LESS_EQUAL) for lines
+    Graphics->ChangeDepthStencilState(Graphics->OverlayDepthState);
+
+    // The OMSetRenderTargets call below might just be setting the DSV.
+    // The ChangeDepthStencilState call above dictates the depth testing behavior.
     Graphics->DeviceContext->OMSetRenderTargets(1, &Graphics->FrameBufferRTV, Graphics->DepthStencilView);
 
     // Line

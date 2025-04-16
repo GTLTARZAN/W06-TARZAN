@@ -162,7 +162,7 @@ public: //Camera Movement
     void UpdateOrthoCameraLoc();
     EViewModeIndex GetViewMode() { return ViewMode; }
     void SetViewMode(EViewModeIndex newMode);
-    ELightingModel GetLighitingModel() { return LightingModel; }
+    ELightingModel GetLightingModel() { return LightingModel; }
     void SetLightingModel(ELightingModel newLighting) { LightingModel = newLighting; }
     uint64 GetShowFlag() { return ShowFlag; }
     void SetShowFlag(uint64 newMode) { ShowFlag = newMode; }

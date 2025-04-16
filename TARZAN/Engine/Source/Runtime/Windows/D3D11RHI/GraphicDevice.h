@@ -78,11 +78,15 @@ public:
 
     UINT screenWidth = 0;
     UINT screenHeight = 0;
+
     // Depth-Stencil 관련 변수
     ID3D11Texture2D* DepthStencilBuffer = nullptr;  
     ID3D11DepthStencilView* DepthStencilView = nullptr; 
     ID3D11ShaderResourceView* DepthStencilSRV = nullptr;
-    ID3D11DepthStencilState* DepthStencilState = nullptr;
+    ID3D11DepthStencilState* ZPrepassDepthStencilState = nullptr;   // Z-Prepass DS State
+    ID3D11DepthStencilState* DepthStencilState = nullptr;           // Main Pass DS State (EQUAL, ZERO_WRITE)
+    ID3D11DepthStencilState* OverlayDepthState = nullptr;           // Overlay Pass DS State (LESS_EQUAL, ZERO_WRITE)
+
     FLOAT ClearColor[4] = { 0.025f, 0.025f, 0.025f, 1.0f }; // 화면을 초기화(clear) 할 때 사용할 색상(RGBA)
 
     ID3D11DepthStencilState* DepthStateDisable = nullptr;

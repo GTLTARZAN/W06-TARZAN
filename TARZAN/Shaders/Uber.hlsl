@@ -227,6 +227,7 @@ VS_OUT Uber_VS(VS_IN Input)
 
 float4 ComputeDiffuseColor(VS_OUT Input);
 
+[earlydepthstencil]
 PS_OUT Uber_PS(VS_OUT Input)
 {
     PS_OUT Output;

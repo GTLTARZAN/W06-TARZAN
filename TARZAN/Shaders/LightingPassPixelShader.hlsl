@@ -149,7 +149,7 @@ float3 ComputeFireballLighting(float4 worldPos, float3 normal)
     return totalLighting;
 }
 
-
+[earlydepthstencil]
 PS_OUTPUT main(PS_Input input)
 {
     PS_OUTPUT output;

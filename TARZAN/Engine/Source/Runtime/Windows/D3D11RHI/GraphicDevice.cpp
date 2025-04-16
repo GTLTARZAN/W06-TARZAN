@@ -115,35 +115,60 @@ void FGraphicsDevice::CreateDepthStencilBuffer(HWND hWindow)
 
 void FGraphicsDevice::CreateDepthStencilState()
 {
-    // DepthStencil 상태 설명 설정
-    D3D11_DEPTH_STENCIL_DESC dsDesc;
+    D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
 
+    // Create Z-Prepass Depth Stencil State
+    ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
+    depthStencilDesc.DepthEnable = TRUE;
+    depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL; // Or D3D11_COMPARISON_LESS depending on needs
+    depthStencilDesc.StencilEnable = FALSE; // No stencil needed for basic Z-Prepass
+
+    HRESULT hr = Device->CreateDepthStencilState(&depthStencilDesc, &ZPrepassDepthStencilState);
+    if (FAILED(hr)) {
+        MessageBox(nullptr, L"Failed to create ZPrepass DepthStencilState!", L"Error", MB_ICONERROR | MB_OK);
+        return;
+    }
+
+    // Create Main Pass Depth Stencil State
+    ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
     // Depth test parameters
-    dsDesc.DepthEnable = true;
-    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
-
+    depthStencilDesc.DepthEnable = true;
+    depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+    depthStencilDesc.DepthFunc = D3D11_COMPARISON_EQUAL;
     // Stencil test parameters
-    dsDesc.StencilEnable = true;
-    dsDesc.StencilReadMask = 0xFF;
-    dsDesc.StencilWriteMask = 0xFF;
-
+    depthStencilDesc.StencilEnable = false;//true;
+    //depthStencilDesc.StencilReadMask = 0xFF;
+    //depthStencilDesc.StencilWriteMask = 0xFF;
     // Stencil operations if pixel is front-facing
-    dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-    dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
+    depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+    depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+    depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+    depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
     // Stencil operations if pixel is back-facing
-    dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-    dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+    depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+    depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+    depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+    depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
     // DepthStencil 상태 생성
-    Device->CreateDepthStencilState(&dsDesc, &DepthStencilState);
+    Device->CreateDepthStencilState(&depthStencilDesc, &DepthStencilState);
 
-    D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
+    // Create Overlay Depth Stencil State (Depth Test On, Write Off, LESS_EQUAL)
+    ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
+    depthStencilDesc.DepthEnable = TRUE;
+    depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+    depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+    depthStencilDesc.StencilEnable = FALSE;
+
+    hr = Device->CreateDepthStencilState(&depthStencilDesc, &OverlayDepthState);
+    if (FAILED(hr)) {
+        MessageBox(nullptr, L"Failed to create Overlay DepthStencilState!", L"Error", MB_ICONERROR | MB_OK);
+        // Consider proper error handling / logging
+    }
+
+    // Create Z-Ignore DepthStencil State
+    ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
     depthStencilDesc.DepthEnable = FALSE;  // 깊이 테스트 유지
     depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;  // 깊이 버퍼에 쓰지 않음
     depthStencilDesc.DepthFunc = D3D11_COMPARISON_ALWAYS;  // 깊이 비교를 항상 통과
@@ -460,9 +485,20 @@ void FGraphicsDevice::ReleaseDepthStencilResources()
         DepthStencilBuffer = nullptr;
     }
 
+    if (ZPrepassDepthStencilState)
+    {
+        ZPrepassDepthStencilState->Release();
+        ZPrepassDepthStencilState = nullptr;
+    }
+
     if (DepthStencilState) {
         DepthStencilState->Release();
         DepthStencilState = nullptr;
+    }
+
+    if (OverlayDepthState) {
+        OverlayDepthState->Release();
+        OverlayDepthState = nullptr;
     }
 
     if (DepthStateDisable) {

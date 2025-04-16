@@ -515,7 +515,7 @@ void ControlEditorPanel::CreateFlagButton() const
     if (ActiveViewport->GetViewMode() == EViewModeIndex::VMI_Lit)
     {
         // Lit을 선택했을 때만 Shade를 선택할 수 있도록
-        FString SelectShaderControl = ShadeModeNames[(int)ActiveViewport->GetLighitingModel() - 1];
+        FString SelectShaderControl = ShadeModeNames[(int)ActiveViewport->GetLightingModel() - 1];
         ImVec2 ShaderTextSize = ImGui::CalcTextSize(GetData(SelectShaderControl));
 
         if (ImGui::Button(GetData(SelectShaderControl), ImVec2(30 + ShaderTextSize.x, 32)))
@@ -527,7 +527,7 @@ void ControlEditorPanel::CreateFlagButton() const
         {
             for (int i = 0; i < IM_ARRAYSIZE(ShadeModeNames); i++)
             {
-                bool bIsSelected = ((int)ActiveViewport->GetLighitingModel() - 1 == i);
+                bool bIsSelected = ((int)ActiveViewport->GetLightingModel() - 1 == i);
                 if (ImGui::Selectable(ShadeModeNames[i], bIsSelected))
                 {
                     ActiveViewport->SetLightingModel((ELightingModel)(i + 1));
