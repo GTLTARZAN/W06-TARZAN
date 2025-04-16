@@ -3,7 +3,7 @@
         {
             "ActorClass": "AStaticMeshActor",
             "ActorID": "AStaticMeshActor_67",
-            "ActorLabel": "OBJ_CUBE_66_94",
+            "ActorLabel": "OBJ_CUBE_66_94_152",
             "Components": [
                 {
                     "ComponentClass": "UStaticMeshComponent",
@@ -34,7 +34,7 @@
         {
             "ActorClass": "AActor",
             "ActorID": "AActor_101",
-            "ActorLabel": "OBJ_DirectionalLight_100",
+            "ActorLabel": "OBJ_DirectionalLight_100_154",
             "Components": [
                 {
                     "ComponentClass": "UDirectionalLightComponent",
@@ -46,7 +46,7 @@
                         "ComponentOwner": "AActor_101",
                         "ComponentOwnerClass": "AActor",
                         "QuatRotation": "X=0.000000 Y=-0.141765 Z=0.000000",
-                        "RelativeLocation": "X=17.157612 Y=0.000000 Z=0.000000",
+                        "RelativeLocation": "X=17.157612 Y=-3.002247 Z=0.000000",
                         "RelativeRotation": "X=0.000000 Y=-16.299999 Z=0.000000",
                         "RelativeScale": "X=1.000000 Y=1.000000 Z=1.000000",
                         "bAutoActive": "false",
@@ -101,6 +101,60 @@
                 }
             ],
             "RootComponentID": "UDirectionalLightComponent_103"
+        },
+        {
+            "ActorClass": "AActor",
+            "ActorID": "AActor_159",
+            "ActorLabel": "OBJ_SpotLight_158",
+            "Components": [
+                {
+                    "ComponentClass": "USpotLightComponent",
+                    "ComponentID": "USpotLightComponent_161",
+                    "Properties": {
+                        "AttachParentID": "nullptr",
+                        "ComponentClass": "USpotLightComponent",
+                        "ComponentName": "USpotLightComponent_161",
+                        "ComponentOwner": "AActor_159",
+                        "ComponentOwnerClass": "AActor",
+                        "InnerConeAngle": "15.000000",
+                        "OuterConeAngle": "30.000000",
+                        "QuatRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeLocation": "X=-7.822587 Y=0.000000 Z=4.229463",
+                        "RelativeRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeScale": "X=1.000000 Y=1.000000 Z=1.000000",
+                        "bAutoActive": "false",
+                        "bCanEverTick": "false",
+                        "bIsActive": "false",
+                        "bTickEnabled": "true"
+                    }
+                },
+                {
+                    "ComponentClass": "UBillboardComponent",
+                    "ComponentID": "UBillboardComponent_163",
+                    "Properties": {
+                        "AABB_max": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "AABB_min": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "AttachParentID": "USpotLightComponent_161",
+                        "ComponentClass": "UBillboardComponent",
+                        "ComponentName": "UBillboardComponent_163",
+                        "ComponentOwner": "AActor_159",
+                        "ComponentOwnerClass": "AActor",
+                        "FinalIndexU": "0.000000",
+                        "FinalIndexV": "0.000000",
+                        "QuatRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeLocation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeRotation": "X=0.000000 Y=0.000000 Z=0.000000",
+                        "RelativeScale": "X=1.000000 Y=1.000000 Z=1.000000",
+                        "TexturePath": "Engine/Icon/SpotLight_64x.png",
+                        "bAutoActive": "false",
+                        "bCanEverTick": "false",
+                        "bIsActive": "false",
+                        "bTickEnabled": "true",
+                        "m_Type": "UBillboardComponent"
+                    }
+                }
+            ],
+            "RootComponentID": "USpotLightComponent_161"
         }
     ],
     "NextUUID": 0,
